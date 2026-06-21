@@ -731,6 +731,8 @@
   .set-accents button.active{border-color:var(--text)}
   .set-muted{color:var(--muted);font-size:12.5px;line-height:1.6;margin-bottom:10px}
   .set-importlbl{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+
+  .beta-thanks{color:var(--green);font-size:13px;margin-top:10px;font-weight:600}
 </style>
 </head>
 <body>
@@ -744,6 +746,7 @@
     <button data-tab="admin" id="nav-admin" style="display:none">🛡 Admin</button>
     <button class="soon" disabled>İstatistik <span class="badge">yakında</span></button>
     <button data-tab="settings">Ayarlar</button>
+    <button data-tab="beta">🧪 Beta</button>
   </nav>
   <div class="clock">
     <span>İstanbul</span><b id="clock">--:--:--</b>
@@ -988,6 +991,8 @@
         <h3>🛡 Moderatörler</h3>
         <div class="ad-mods"><input id="ad-mod-email" placeholder="kullanıcı adı (örn. mustafa_fx)" autocomplete="off"><button id="ad-mod-add">Mod yap</button></div>
         <div id="ad-mod-list" class="ad-mod-list"></div>
+        <h3>📨 Geri Bildirimler</h3>
+        <div id="ad-feedback" class="ad-mod-content"></div>
       </div>
       <h3>🧹 İçerik Denetimi — Paylaşımlar</h3>
       <div id="ad-mod-content" class="ad-mod-content"></div>
@@ -1023,6 +1028,17 @@
       <div class="set-card"><h3>ℹ️ Hakkında</h3>
         <p class="set-muted">FX Desk · sürüm 1.0 — Trader'lar için grafik, ekonomik takvim, işlem günlüğü ve topluluk. Geri bildirim için yöneticiyle iletişime geç.</p>
         <div class="set-field"><label>Dil</label><select id="set-lang" disabled><option>Türkçe</option><option>English (yakında)</option></select></div>
+      </div>
+    </div>
+  </section>
+  <section id="view-beta" class="view" style="display:none">
+    <div class="set-wrap">
+      <h2>🧪 Beta Sürümü</h2>
+      <div class="set-card">
+        <p class="set-muted">FX Desk şu an <b>beta</b> aşamasında. Sürekli yeni özellikler ekliyoruz; bu süreçte zaman zaman hatalar, eksikler veya beklenmedik davranışlar olabilir. Karşılaştığın bir sorunu ya da eklenmesini istediğin bir özelliği aşağıya yazarsan doğrudan bize ulaşır; geri bildirimlerini değerlendirip önceliklendiririz. Mesajlarını yalnızca yöneticiler görür. Katkın bu uygulamayı birlikte daha iyi hale getirmemizi sağlıyor — teşekkürler! 🙏</p>
+        <div class="set-field"><label>Sorun bildir / özellik öner</label><textarea id="beta-msg" rows="5" placeholder="Örn: 4'lü grafikte mumlar küçük görünüyor... / Şu özelliği eklemek isterdim..."></textarea></div>
+        <button id="beta-send">Gönder</button>
+        <div id="beta-thanks" class="beta-thanks" style="display:none">✅ Teşekkürler! Geri bildirimin bize ulaştı.</div>
       </div>
     </div>
   </section>
@@ -2363,7 +2379,7 @@ function fmtDur(s){s=Math.round(s||0);if(s<60)return s+'sn';if(s<3600)return Mat
 async function smAddMod(name){name=(name||'').trim();if(!name)return;
   if(!DEMO){try{const {data,error}=await sb.from('profiles').update({is_moderator:true}).eq('username',name).select();if(error)throw error;if(!data||!data.length){alert('"'+name+'" adlı kullanıcı bulunamadı (önce kayıt olmalı).');}}catch(e){alert('Mod atanamadı: '+(e.message||e));}}
   else addMod(name);
-  renderModList();
+  renderModList(); renderFeedback();
 }
 async function smRemoveMod(name){
   if(!DEMO){try{await sb.from('profiles').update({is_moderator:false}).eq('username',name);}catch(e){console.warn(e);}}
@@ -2540,6 +2556,25 @@ async function delAccount(){
   if(b('set-delacc'))b('set-delacc').addEventListener('click',delAccount);
 })();
 
+/* ================= BETA / GERİ BİLDİRİM ================= */
+async function sendFeedback(){
+  const el=document.getElementById('beta-msg'); const t=el.value.trim();
+  if(!t){alert('Lütfen mesajını yaz.');return;}
+  if(!currentUser){showGate();return;}
+  if(!DEMO){ try{const {error}=await sb.from('feedback').insert({user_id:currentUser.id,username:currentUser.username,message:t});if(error)throw error;}catch(e){alert('Gönderilemedi: '+(e.message||e));return;} }
+  else { const a=JSON.parse(localStorage.getItem('fxdesk_feedback')||'[]'); a.push({id:'fb'+Date.now(),username:currentUser.username,message:t,ts:Date.now()}); localStorage.setItem('fxdesk_feedback',JSON.stringify(a)); }
+  el.value=''; const th=document.getElementById('beta-thanks'); if(th){th.style.display='block'; setTimeout(()=>{if(th)th.style.display='none';},4000);}
+}
+async function renderFeedback(){
+  const box=document.getElementById('ad-feedback'); if(!box)return;
+  let list=[];
+  if(!DEMO){ try{const {data}=await sb.from('feedback').select('*').order('created_at',{ascending:false}); list=(data||[]).map(x=>({id:x.id,username:x.username,message:x.message,ts:new Date(x.created_at).getTime()}));}catch(e){console.warn(e);} }
+  else list=(JSON.parse(localStorage.getItem('fxdesk_feedback')||'[]')).sort((a,b)=>b.ts-a.ts);
+  box.innerHTML=list.length?list.map(fb=>'<div class="ad-item"><div class="ad-it-meta"><b>'+esc(fb.username||'?')+'</b> <span class="ad-muted">· '+fmtDT(fb.ts)+'</span><br>'+esc(fb.message)+'</div><div class="ad-acts"><button class="ad-del" data-fb="'+fb.id+'">Sil</button></div></div>').join(''):'<div class="ad-muted">Henüz geri bildirim yok.</div>';
+  box.querySelectorAll('[data-fb]').forEach(b=>b.addEventListener('click',async()=>{const id=b.dataset.fb;if(!confirm('Geri bildirimi sil?'))return;if(!DEMO){try{await sb.from('feedback').delete().eq('id',id);}catch(e){}}else{const a=JSON.parse(localStorage.getItem('fxdesk_feedback')||'[]').filter(x=>x.id!==id);localStorage.setItem('fxdesk_feedback',JSON.stringify(a));}renderFeedback();}));
+}
+(function(){const b=document.getElementById('beta-send'); if(b)b.addEventListener('click',sendFeedback);})();
+
 /* ---------- Sekme geçişi ---------- */
 function switchTab(tab){
   document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
@@ -2548,6 +2583,7 @@ function switchTab(tab){
   document.getElementById('view-journal').style.display = tab==='journal'?'flex':'none';
   const va=document.getElementById('view-admin'); if(va)va.style.display=tab==='admin'?'flex':'none';
   const vs=document.getElementById('view-settings'); if(vs)vs.style.display=tab==='settings'?'flex':'none';
+  const vb=document.getElementById('view-beta'); if(vb)vb.style.display=tab==='beta'?'flex':'none';
   if(tab==='feed')refreshFeed();
   if(tab==='journal'){ if(!DEMO){jrPullState().then(renderJournal);} else renderJournal(); }
   if(tab==='admin'){ if(!DEMO){sbLoadFeed().then(renderAdmin);} else renderAdmin(); }
@@ -2560,7 +2596,7 @@ document.querySelectorAll('#nav button:not(.soon)').forEach(b=>{
 window.addEventListener('hashchange',()=>{
   if(!currentUser)return;
   const t=(location.hash||'').replace('#','');
-  if(['trade','feed','journal','admin','settings'].includes(t)){ if(t==='admin'&&!(currentUser.isAdmin||currentUser.isMod))return; switchTab(t); }
+  if(['trade','feed','journal','admin','settings','beta'].includes(t)){ if(t==='admin'&&!(currentUser.isAdmin||currentUser.isMod))return; switchTab(t); }
 });
 
 
@@ -2582,7 +2618,7 @@ function showApp(){
   if(!_loginCounted){_loginCounted=true;recordLogin(currentUser);}
   ensureProfileRow();
   let _t=(location.hash||'').replace('#','');
-  if(!['trade','feed','journal','admin','settings'].includes(_t))_t='trade';
+  if(!['trade','feed','journal','admin','settings','beta'].includes(_t))_t='trade';
   if(_t==='admin'&&!(currentUser.isAdmin||currentUser.isMod))_t='trade';
   switchTab(_t);
 }
