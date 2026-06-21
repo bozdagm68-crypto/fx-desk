@@ -1161,10 +1161,12 @@ async function loadCalendar(){
   if(!calEvents.length){ calEvents=parseEvents(FF_SAMPLE); renderCalendar(); tickCalendar(); }
   calStatus('güncelleniyor…');
   let raw=null;
-  try{ raw=await (await fetchTimeout(FF_URL,7000)).json(); }
-  catch(e){
-    try{ raw=await (await fetchTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(FF_URL),7000)).json(); }
-    catch(e2){ raw=null; }
+  const SRC=[FF_URL,
+    'https://api.codetabs.com/v1/proxy/?quest='+encodeURIComponent(FF_URL),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(FF_URL),
+    'https://corsproxy.io/?url='+encodeURIComponent(FF_URL)];
+  for(const u of SRC){
+    try{ const r=await fetchTimeout(u,8000); if(!r.ok)continue; const j=JSON.parse(await r.text()); if(Array.isArray(j)&&j.length){raw=j;break;} }catch(e){}
   }
   if(raw && raw.length){ calEvents=parseEvents(raw); calStatus('canlı · '+fmtTime(new Date())+' güncellendi'); }
   else { calStatus('örnek veri (canlı veri alınamadı · yenilemek için tıkla)'); }
