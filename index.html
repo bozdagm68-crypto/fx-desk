@@ -733,6 +733,8 @@
   .set-importlbl{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 
   .beta-thanks{color:var(--green);font-size:13px;margin-top:10px;font-weight:600}
+
+  input[type=color].set-color{width:48px;height:30px;padding:0;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer}
 </style>
 </head>
 <body>
@@ -1018,6 +1020,13 @@
         <div class="set-field"><label>Tabloda sayfa başına işlem</label><input id="set-jper" type="number"></div>
         <button id="set-trade-save">Kaydet</button>
       </div>
+      <div class="set-card"><h3>🎨 4'lü Grafik Renkleri</h3>
+        <div class="set-row"><span>Arka plan</span><input type="color" id="gc-bg" class="set-color"></div>
+        <div class="set-row"><span>Yükselen mum</span><input type="color" id="gc-up" class="set-color"></div>
+        <div class="set-row"><span>Düşen mum</span><input type="color" id="gc-down" class="set-color"></div>
+        <div class="set-row"><span>Fitil / kenar</span><input type="color" id="gc-wick" class="set-color"></div>
+        <button id="gc-reset" class="set-danger">Varsayılana sıfırla</button>
+      </div>
       <div class="set-card"><h3>📅 Ekonomik takvim</h3>
         <div class="set-row"><span>Varsayılan önem filtresi</span><div class="set-seg" id="set-calimp"><button data-i="high">🔴 Yüksek</button><button data-i="med">🔴🟠 +Orta</button><button data-i="all">Tümü</button></div></div>
       </div>
@@ -1239,11 +1248,15 @@ let chartMode='single';
 let GRID_TFS=JSON.parse(localStorage.getItem('fxdesk_grid_tfs')||'null')||['1','5','45','240'];
 function buildGrid(symbol){
   const g=document.getElementById('chart-grid'); if(!g)return; g.innerHTML='';
+  const GBG=localStorage.getItem('fxdesk_grid_bg')||'#161a25';
+  const GUP=localStorage.getItem('fxdesk_grid_up')||'#ffffff';
+  const GDN=localStorage.getItem('fxdesk_grid_down')||'#787b86';
+  const GWK=localStorage.getItem('fxdesk_grid_wick')||'#9598a1';
   GRID_TFS.forEach((tf,i)=>{
     const cell=document.createElement('div'); cell.className='tvg-cell';
     const inner=document.createElement('div'); inner.id='tvg'+i; inner.style.width='100%'; inner.style.height='100%';
     cell.appendChild(inner); g.appendChild(cell);
-    new TradingView.widget({container_id:'tvg'+i,autosize:true,symbol:symbol||'FX:EURUSD',interval:tf,timezone:"Europe/Istanbul",theme:"dark",style:"1",locale:"tr",hide_side_toolbar:false,allow_symbol_change:true,withdateranges:false,details:false,hide_volume:true,studies:["RSI@tv-basicstudies"],studies_overrides:{"volume.volume.display":false,"relative strength index.upper band.value":70,"relative strength index.middle band.value":50,"relative strength index.lower band.value":30,"relative strength index.upper band.color":"#787b86","relative strength index.lower band.color":"#787b86","relative strength index.plot.color":"#c8cad0","relative strength index.plot.linewidth":2,"relative strength index.smoothed ma.color":"#9598a1"},overrides:{"paneProperties.background":"#161a25","paneProperties.backgroundType":"solid","paneProperties.vertGridProperties.color":"#1f2430","paneProperties.horzGridProperties.color":"#1f2430","mainSeriesProperties.candleStyle.upColor":"#ffffff","mainSeriesProperties.candleStyle.downColor":"#787b86","mainSeriesProperties.candleStyle.borderUpColor":"#ffffff","mainSeriesProperties.candleStyle.borderDownColor":"#787b86","mainSeriesProperties.candleStyle.wickUpColor":"#d1d4dc","mainSeriesProperties.candleStyle.wickDownColor":"#787b86","mainSeriesProperties.candleStyle.drawBorder":true}});
+    new TradingView.widget({container_id:'tvg'+i,autosize:true,symbol:symbol||'FX:EURUSD',interval:tf,timezone:"Europe/Istanbul",theme:"dark",style:"1",locale:"tr",hide_side_toolbar:false,allow_symbol_change:true,withdateranges:false,details:false,hide_volume:true,studies:["RSI@tv-basicstudies"],studies_overrides:{"volume.volume.display":false,"relative strength index.upper band.value":70,"relative strength index.middle band.value":50,"relative strength index.lower band.value":30,"relative strength index.upper band.color":"#787b86","relative strength index.lower band.color":"#787b86","relative strength index.plot.color":"#c8cad0","relative strength index.plot.linewidth":2,"relative strength index.smoothed ma.color":"#9598a1"},overrides:{"paneProperties.background":GBG,"paneProperties.backgroundType":"solid","paneProperties.vertGridProperties.color":"rgba(150,150,150,0.10)","paneProperties.horzGridProperties.color":"rgba(150,150,150,0.10)","mainSeriesProperties.candleStyle.upColor":GUP,"mainSeriesProperties.candleStyle.downColor":GDN,"mainSeriesProperties.candleStyle.borderUpColor":GUP,"mainSeriesProperties.candleStyle.borderDownColor":GDN,"mainSeriesProperties.candleStyle.wickUpColor":GWK,"mainSeriesProperties.candleStyle.wickDownColor":GWK,"mainSeriesProperties.candleStyle.drawBorder":true}});
   });
 }
 function setChartMode(m){
@@ -2430,7 +2443,7 @@ function renderAdmin(){
 /* ===== SUPABASE FEED KATMANI ===== */
 async function ensureProfileRow(){
   if(DEMO||!sb||!currentUser)return;
-  try{await sb.from('profiles').upsert({id:currentUser.id,username:currentUser.username,is_admin:isAdminEmail(currentUser.email)});}catch(e){console.warn('profile',e);}
+  try{await sb.from('profiles').upsert({id:currentUser.id,username:currentUser.username});}catch(e){console.warn('profile',e);}
 }
 async function uploadShot(dataUrl){
   try{
@@ -2499,6 +2512,11 @@ function settingsInit(){
   if(g('set-jper'))g('set-jper').value=localStorage.getItem('fxdesk_jper')||'10';
   const ci=localStorage.getItem('fxdesk_cal_imp')||'med';
   document.querySelectorAll('#set-calimp button').forEach(b=>b.classList.toggle('active',b.dataset.i===ci));
+  const gv=(k,d)=>localStorage.getItem(k)||d;
+  if(g('gc-bg'))g('gc-bg').value=gv('fxdesk_grid_bg','#161a25');
+  if(g('gc-up'))g('gc-up').value=gv('fxdesk_grid_up','#ffffff');
+  if(g('gc-down'))g('gc-down').value=gv('fxdesk_grid_down','#787b86');
+  if(g('gc-wick'))g('gc-wick').value=gv('fxdesk_grid_wick','#9598a1');
 }
 async function changePass(){
   const el=document.getElementById('set-pass'); const p=el.value;
@@ -2554,6 +2572,9 @@ async function delAccount(){
   if(b('set-import'))b('set-import').addEventListener('change',e=>{const f=e.target.files[0];if(f)importJournal(f);});
   if(b('set-clear'))b('set-clear').addEventListener('click',clearAll);
   if(b('set-delacc'))b('set-delacc').addEventListener('click',delAccount);
+  const gcmap={'gc-bg':'fxdesk_grid_bg','gc-up':'fxdesk_grid_up','gc-down':'fxdesk_grid_down','gc-wick':'fxdesk_grid_wick'};
+  Object.keys(gcmap).forEach(id=>{const el=document.getElementById(id); if(el)el.addEventListener('input',()=>{localStorage.setItem(gcmap[id],el.value); if(typeof chartMode!=='undefined'&&chartMode==='grid'&&typeof buildGrid==='function')buildGrid(activeSym);});});
+  const gcr=document.getElementById('gc-reset'); if(gcr)gcr.addEventListener('click',()=>{['fxdesk_grid_bg','fxdesk_grid_up','fxdesk_grid_down','fxdesk_grid_wick'].forEach(k=>localStorage.removeItem(k)); settingsInit(); if(typeof chartMode!=='undefined'&&chartMode==='grid')buildGrid(activeSym);});
 })();
 
 /* ================= BETA / GERİ BİLDİRİM ================= */
