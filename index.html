@@ -700,6 +700,12 @@
   .chart-modes button.active{background:var(--accent);border-color:var(--accent);color:#fff}
   #chart-grid{width:100%;height:100%;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;background:var(--border)}
   .tvg-cell{position:relative;min-height:0;min-width:0;background:var(--bg)}
+
+  .rh-chev{margin-left:8px;cursor:pointer;color:var(--muted);font-size:12px;transition:.15s;user-select:none;flex-shrink:0}
+  .rh-chev:hover{color:var(--text)}
+  .cal-wrap.collapsed,.dict.collapsed{flex:0 0 auto}
+  .cal-wrap.collapsed > :not(.right-head),.dict.collapsed > :not(.right-head){display:none}
+  .cal-wrap.collapsed .rh-chev,.dict.collapsed .rh-chev{transform:rotate(-90deg)}
 </style>
 </head>
 <body>
@@ -774,7 +780,7 @@
       <span class="lbl">Hızlı sembol:</span>
       <div class="sym-list" id="sym-list"></div>
       <button class="sym-add" id="sym-add" title="Sembol ekle">+</button>
-      <div class="chart-modes"><button id="cm-single" class="active">◻ Tek</button><button id="cm-grid">🔲 4'lü</button></div>
+      <div class="chart-modes"><button id="cm-single" class="active">◻ Tek</button><button id="cm-grid">🔲 4'lü</button><button id="cm-panel" title="Takvim/Sözlük panelini gizle/göster">📅 Panel</button></div>
     </div>
     <div id="chart-wrap"><div id="tv_chart"></div><div id="chart-grid" style="display:none"></div></div>
   </section>
@@ -785,6 +791,7 @@
       <div class="right-head">
         <h2>📅 Ekonomik Takvim</h2>
         <span class="sub" id="cal-status" title="Yenilemek için tıkla">yükleniyor…</span>
+        <span class="rh-chev" data-target="cal" title="Aç/Kapat">▾</span>
       </div>
       <div class="cal-next" id="cal-next" style="display:none"></div>
       <div class="cal-filters">
@@ -801,6 +808,7 @@
       <div class="right-head">
         <h2>📖 Veri Sözlüğü</h2>
         <span class="sub">veri ne anlama gelir?</span>
+        <span class="rh-chev" data-target="dict" title="Aç/Kapat">▾</span>
       </div>
       <div class="dict-search">
         <input id="dict-search" type="text" placeholder="Veri ara (örn: CPI, NFP, faiz)..." />
@@ -1161,7 +1169,7 @@ function buildGrid(symbol){
     const cell=document.createElement('div'); cell.className='tvg-cell';
     const inner=document.createElement('div'); inner.id='tvg'+i; inner.style.width='100%'; inner.style.height='100%';
     cell.appendChild(inner); g.appendChild(cell);
-    new TradingView.widget({container_id:'tvg'+i,autosize:true,symbol:symbol||'FX:EURUSD',interval:tf,timezone:"Europe/Istanbul",theme:document.body.classList.contains('light')?"light":"dark",style:"1",locale:"tr",hide_side_toolbar:true,allow_symbol_change:true,withdateranges:false,details:false});
+    new TradingView.widget({container_id:'tvg'+i,autosize:true,symbol:symbol||'FX:EURUSD',interval:tf,timezone:"Europe/Istanbul",theme:document.body.classList.contains('light')?"light":"dark",style:"1",locale:"tr",hide_side_toolbar:false,allow_symbol_change:true,withdateranges:false,details:false,hide_volume:true,studies:["RSI@tv-basicstudies"],studies_overrides:{"volume.volume.display":false}});
   });
 }
 function setChartMode(m){
@@ -1174,6 +1182,21 @@ function setChartMode(m){
 }
 document.getElementById('cm-single').addEventListener('click',()=>setChartMode('single'));
 document.getElementById('cm-grid').addEventListener('click',()=>setChartMode('grid'));
+
+/* ---- panel & bölüm aç/kapat ---- */
+document.querySelectorAll('.rh-chev').forEach(c=>c.addEventListener('click',e=>{
+  e.stopPropagation();
+  const el=document.querySelector(c.dataset.target==='cal'?'.cal-wrap':'.dict');
+  if(el)el.classList.toggle('collapsed');
+}));
+function applyPanel(hidden){
+  const r=document.getElementById('trade-right'); if(r)r.style.display=hidden?'none':'';
+  const b=document.getElementById('cm-panel'); if(b)b.classList.toggle('active',hidden);
+  localStorage.setItem('fxdesk_panel',hidden?'hidden':'shown');
+}
+const _cp=document.getElementById('cm-panel');
+if(_cp)_cp.addEventListener('click',()=>applyPanel(document.getElementById('trade-right').style.display!=='none'));
+applyPanel(localStorage.getItem('fxdesk_panel')==='hidden');
 
 /* ========== EKONOMİK TAKVİM (ForexFactory verisi) ========== */
 const FF_URL='https://nfs.faireconomy.media/ff_calendar_thisweek.json';
