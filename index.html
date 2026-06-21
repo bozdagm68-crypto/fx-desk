@@ -1169,7 +1169,7 @@ function buildGrid(symbol){
     const cell=document.createElement('div'); cell.className='tvg-cell';
     const inner=document.createElement('div'); inner.id='tvg'+i; inner.style.width='100%'; inner.style.height='100%';
     cell.appendChild(inner); g.appendChild(cell);
-    new TradingView.widget({container_id:'tvg'+i,autosize:true,symbol:symbol||'FX:EURUSD',interval:tf,timezone:"Europe/Istanbul",theme:document.body.classList.contains('light')?"light":"dark",style:"1",locale:"tr",hide_side_toolbar:false,allow_symbol_change:true,withdateranges:false,details:false,hide_volume:true,studies:["RSI@tv-basicstudies"],studies_overrides:{"volume.volume.display":false}});
+    new TradingView.widget({container_id:'tvg'+i,autosize:true,symbol:symbol||'FX:EURUSD',interval:tf,timezone:"Europe/Istanbul",theme:"light",style:"1",locale:"tr",hide_side_toolbar:false,allow_symbol_change:true,withdateranges:false,details:false,hide_volume:true,studies:["RSI@tv-basicstudies"],studies_overrides:{"volume.volume.display":false},overrides:{"mainSeriesProperties.candleStyle.upColor":"#ffffff","mainSeriesProperties.candleStyle.downColor":"#000000","mainSeriesProperties.candleStyle.borderUpColor":"#000000","mainSeriesProperties.candleStyle.borderDownColor":"#000000","mainSeriesProperties.candleStyle.wickUpColor":"#000000","mainSeriesProperties.candleStyle.wickDownColor":"#000000","mainSeriesProperties.candleStyle.drawBorder":true}});
   });
 }
 function setChartMode(m){
