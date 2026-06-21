@@ -706,6 +706,31 @@
   .cal-wrap.collapsed,.dict.collapsed{flex:0 0 auto}
   .cal-wrap.collapsed > :not(.right-head),.dict.collapsed > :not(.right-head){display:none}
   .cal-wrap.collapsed .rh-chev,.dict.collapsed .rh-chev{transform:rotate(-90deg)}
+
+  #view-settings{flex-direction:column;overflow:auto}
+  .set-wrap{flex:1;overflow-y:auto;padding:22px 20px;max-width:680px;margin:0 auto;width:100%}
+  .set-wrap h2{font-size:19px;font-weight:700;margin-bottom:16px}
+  .set-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+  .set-card h3{font-size:14px;font-weight:700;margin-bottom:12px}
+  .set-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:13px}
+  .set-row span{color:var(--muted)}
+  .set-field{margin-bottom:12px}
+  .set-field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+  .set-field input,.set-field select{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 11px;border-radius:8px;font-size:13px;font-family:inherit;outline:none;width:100%}
+  .set-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .set-inline input{width:auto}
+  .set-card>button,.set-card .set-inline>button{background:var(--accent);color:#fff;border:none;padding:9px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  .set-card>button:hover{filter:brightness(1.08)}
+  .set-danger{background:var(--panel-2)!important;color:var(--red)!important;border:1px solid var(--border)!important;margin-top:8px;margin-right:8px}
+  .set-danger:hover{border-color:var(--red)!important}
+  .set-seg{display:flex;gap:4px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:3px}
+  .set-seg button{background:none!important;color:var(--muted)!important;font-size:12px;padding:6px 10px;border-radius:6px;border:none;cursor:pointer;font-family:inherit;font-weight:600}
+  .set-seg button.active{background:var(--accent)!important;color:#fff!important}
+  .set-accents{display:flex;gap:8px}
+  .set-accents button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;padding:0;cursor:pointer}
+  .set-accents button.active{border-color:var(--text)}
+  .set-muted{color:var(--muted);font-size:12.5px;line-height:1.6;margin-bottom:10px}
+  .set-importlbl{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
@@ -718,7 +743,7 @@
     <button data-tab="journal">Journal</button>
     <button data-tab="admin" id="nav-admin" style="display:none">🛡 Admin</button>
     <button class="soon" disabled>İstatistik <span class="badge">yakında</span></button>
-    <button class="soon" disabled>Ayarlar <span class="badge">yakında</span></button>
+    <button data-tab="settings">Ayarlar</button>
   </nav>
   <div class="clock">
     <span>İstanbul</span><b id="clock">--:--:--</b>
@@ -968,6 +993,39 @@
       <div id="ad-mod-content" class="ad-mod-content"></div>
     </div>
   </section>
+  <section id="view-settings" class="view" style="display:none">
+    <div class="set-wrap">
+      <h2>⚙️ Ayarlar</h2>
+      <div class="set-card"><h3>👤 Hesap</h3>
+        <div class="set-row"><span>Kullanıcı adı</span><b id="set-username">—</b></div>
+        <div class="set-row"><span>E-posta</span><b id="set-email">—</b></div>
+        <div class="set-field"><label>Yeni şifre</label><div class="set-inline"><input id="set-pass" type="password" placeholder="en az 6 karakter"><button id="set-pass-btn">Şifreyi değiştir</button></div></div>
+        <button id="set-logout" class="set-danger">Çıkış yap</button>
+      </div>
+      <div class="set-card"><h3>🎨 Görünüm</h3>
+        <div class="set-row"><span>Tema</span><div class="set-seg" id="set-theme"><button data-th="dark">🌙 Koyu</button><button data-th="light">☀️ Açık</button></div></div>
+        <div class="set-row"><span>Vurgu rengi</span><div class="set-accents" id="set-accents"><button data-c="#6d5dfc" style="background:#6d5dfc"></button><button data-c="#2962ff" style="background:#2962ff"></button><button data-c="#16a34a" style="background:#16a34a"></button><button data-c="#f59e0b" style="background:#f59e0b"></button><button data-c="#ef4444" style="background:#ef4444"></button></div></div>
+      </div>
+      <div class="set-card"><h3>📊 Trade & Journal</h3>
+        <div class="set-field"><label>4'lü ekran zaman dilimleri (TradingView kodu: 1, 5, 15, 45, 60, 240, D)</label><div class="set-inline"><input id="set-tf0" style="width:64px"><input id="set-tf1" style="width:64px"><input id="set-tf2" style="width:64px"><input id="set-tf3" style="width:64px"></div></div>
+        <div class="set-field"><label>Yeni profil başlangıç bakiyesi</label><input id="set-bal" type="number"></div>
+        <div class="set-field"><label>Para birimi</label><input id="set-cur"></div>
+        <div class="set-field"><label>Tabloda sayfa başına işlem</label><input id="set-jper" type="number"></div>
+        <button id="set-trade-save">Kaydet</button>
+      </div>
+      <div class="set-card"><h3>📅 Ekonomik takvim</h3>
+        <div class="set-row"><span>Varsayılan önem filtresi</span><div class="set-seg" id="set-calimp"><button data-i="high">🔴 Yüksek</button><button data-i="med">🔴🟠 +Orta</button><button data-i="all">Tümü</button></div></div>
+      </div>
+      <div class="set-card"><h3>💾 Veri yönetimi</h3>
+        <div class="set-inline"><button id="set-export">Journal yedeğini indir (JSON)</button><label class="set-importlbl">İçe aktar<input id="set-import" type="file" accept=".json" hidden></label></div>
+        <div><button id="set-clear" class="set-danger">Tüm verilerimi temizle</button><button id="set-delacc" class="set-danger">Hesabımı sil</button></div>
+      </div>
+      <div class="set-card"><h3>ℹ️ Hakkında</h3>
+        <p class="set-muted">FX Desk · sürüm 1.0 — Trader'lar için grafik, ekonomik takvim, işlem günlüğü ve topluluk. Geri bildirim için yöneticiyle iletişime geç.</p>
+        <div class="set-field"><label>Dil</label><select id="set-lang" disabled><option>Türkçe</option><option>English (yakında)</option></select></div>
+      </div>
+    </div>
+  </section>
 </main>
 
 
@@ -1162,7 +1220,7 @@ loadChart(activeSym);
 
 /* ---- 4'lü grafik görünümü ---- */
 let chartMode='single';
-const GRID_TFS=['1','5','45','240'];
+let GRID_TFS=JSON.parse(localStorage.getItem('fxdesk_grid_tfs')||'null')||['1','5','45','240'];
 function buildGrid(symbol){
   const g=document.getElementById('chart-grid'); if(!g)return; g.innerHTML='';
   GRID_TFS.forEach((tf,i)=>{
@@ -1225,7 +1283,7 @@ const FF_SAMPLE=[
 ];
 
 let calEvents=[];
-let calImp='med';
+let calImp=localStorage.getItem('fxdesk_cal_imp')||'med';
 let calCur=new Set(MAJORS);
 
 function calStatus(t){document.getElementById('cal-status').textContent=t;}
@@ -1821,7 +1879,7 @@ function renderJrTable(){
   const empty=document.getElementById('jr-empty');
   empty.style.display=sorted.length?'none':'block';
   empty.innerHTML='Henüz işlem yok.<br>📥 Rapor Yükle ile MT5/fon HTML raporunu at, ya da "+ Yeni işlem" ile elle ekle.';
-  const JPER=10, jpages=Math.max(1,Math.ceil(sorted.length/JPER));
+  const JPER=+(localStorage.getItem('fxdesk_jper')||10)||10, jpages=Math.max(1,Math.ceil(sorted.length/JPER));
   if(jrPage>jpages)jrPage=jpages; if(jrPage<1)jrPage=1;
   const slice=sorted.slice((jrPage-1)*JPER,jrPage*JPER);
   slice.forEach(t=>{
@@ -2016,8 +2074,8 @@ function clearPrForm(){
   document.getElementById('pr-type').value='real';
   document.getElementById('pr-broker').value='';
   document.getElementById('pr-acc').value='real';
-  document.getElementById('pr-bal').value='10000';
-  document.getElementById('pr-cur').value='USD';
+  document.getElementById('pr-bal').value=localStorage.getItem('fxdesk_def_balance')||'10000';
+  document.getElementById('pr-cur').value=localStorage.getItem('fxdesk_def_currency')||'USD';
   updPrAuto();
 }
 function fillPrForm(id){
@@ -2276,7 +2334,7 @@ document.getElementById('jr-import-head').addEventListener('click',()=>document.
 document.getElementById('jr-import-head-file').addEventListener('change',e=>{const fl=e.target.files[0];if(fl)doImport(fl);e.target.value='';});
 
 function applyTheme(t){document.body.classList.toggle('light',t==='light');const b=document.getElementById('theme-btn');if(b)b.textContent=t==='light'?'☀️':'🌙';localStorage.setItem('fxdesk_theme',t);}
-(function(){const tb=document.getElementById('theme-btn');if(tb)tb.addEventListener('click',()=>applyTheme(document.body.classList.contains('light')?'dark':'light'));applyTheme(localStorage.getItem('fxdesk_theme')||'dark');})();
+(function(){const tb=document.getElementById('theme-btn');if(tb)tb.addEventListener('click',()=>applyTheme(document.body.classList.contains('light')?'dark':'light'));applyTheme(localStorage.getItem('fxdesk_theme')||'dark');applyAccent(localStorage.getItem('fxdesk_accent')||'#6d5dfc');})();
 
 /* ================= ADMIN / MODERATÖR ================= */
 let _loginCounted=false;
@@ -2408,6 +2466,80 @@ async function jrPullState(){
   }catch(e){console.warn('jrPull',e);}
 }
 
+/* ================= AYARLAR ================= */
+function applyAccent(c){if(!c)return;document.documentElement.style.setProperty('--accent',c);localStorage.setItem('fxdesk_accent',c);}
+function settingsInit(){
+  const g=id=>document.getElementById(id);
+  if(g('set-username'))g('set-username').textContent=currentUser?currentUser.username:'—';
+  if(g('set-email'))g('set-email').textContent=currentUser?currentUser.email:'—';
+  const th=localStorage.getItem('fxdesk_theme')||'dark';
+  document.querySelectorAll('#set-theme button').forEach(b=>b.classList.toggle('active',b.dataset.th===th));
+  const ac=(localStorage.getItem('fxdesk_accent')||'#6d5dfc').toLowerCase();
+  document.querySelectorAll('#set-accents button').forEach(b=>b.classList.toggle('active',b.dataset.c.toLowerCase()===ac));
+  const tfs=JSON.parse(localStorage.getItem('fxdesk_grid_tfs')||'null')||['1','5','45','240'];
+  ['set-tf0','set-tf1','set-tf2','set-tf3'].forEach((id,i)=>{if(g(id))g(id).value=tfs[i]||'';});
+  if(g('set-bal'))g('set-bal').value=localStorage.getItem('fxdesk_def_balance')||'10000';
+  if(g('set-cur'))g('set-cur').value=localStorage.getItem('fxdesk_def_currency')||'USD';
+  if(g('set-jper'))g('set-jper').value=localStorage.getItem('fxdesk_jper')||'10';
+  const ci=localStorage.getItem('fxdesk_cal_imp')||'med';
+  document.querySelectorAll('#set-calimp button').forEach(b=>b.classList.toggle('active',b.dataset.i===ci));
+}
+async function changePass(){
+  const el=document.getElementById('set-pass'); const p=el.value;
+  if(p.length<6){alert('Şifre en az 6 karakter olmalı.');return;}
+  if(!DEMO){ const {error}=await sb.auth.updateUser({password:p}); alert(error?('Hata: '+error.message):'Şifre güncellendi.'); }
+  else { const us=JSON.parse(localStorage.getItem('fxdesk_users')||'[]'); const u=us.find(x=>x.id===currentUser.id); if(u){u.pass=p;localStorage.setItem('fxdesk_users',JSON.stringify(us));} alert('Şifre güncellendi.'); }
+  el.value='';
+}
+function saveTradeSettings(){
+  const tfs=['set-tf0','set-tf1','set-tf2','set-tf3'].map(id=>document.getElementById(id).value.trim()).filter(Boolean);
+  if(tfs.length===4){localStorage.setItem('fxdesk_grid_tfs',JSON.stringify(tfs)); GRID_TFS=tfs;}
+  localStorage.setItem('fxdesk_def_balance',document.getElementById('set-bal').value||'10000');
+  localStorage.setItem('fxdesk_def_currency',document.getElementById('set-cur').value||'USD');
+  localStorage.setItem('fxdesk_jper',document.getElementById('set-jper').value||'10');
+  alert('Trade & Journal ayarları kaydedildi.');
+}
+function exportJournal(){
+  const data={}; jrStateKeys().forEach(k=>data[k]=localStorage.getItem(k));
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='fxdesk-journal-yedek.json'; a.click();
+}
+function importJournal(file){
+  const r=new FileReader();
+  r.onload=e=>{ try{ const d=JSON.parse(e.target.result); Object.entries(d).forEach(([k,v])=>{if(typeof v==='string')localStorage.setItem(k,v);}); if(typeof jrPushState==='function')jrPushState(); alert('Yedek içe aktarıldı. Sayfa yenileniyor.'); location.reload(); }catch(err){ alert('Geçersiz yedek dosyası.'); } };
+  r.readAsText(file);
+}
+function clearAll(){
+  if(!confirm('TÜM yerel verilerin (journal, profiller, ayarlar) silinecek ve çıkış yapılacak. Emin misin?'))return;
+  const rm=[]; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('fxdesk_'))rm.push(k);}
+  rm.forEach(k=>localStorage.removeItem(k)); alert('Veriler temizlendi.'); location.reload();
+}
+async function delAccount(){
+  if(!confirm('Hesabının verileri silinecek. Bu işlem geri alınamaz. Devam edilsin mi?'))return;
+  try{ jrStateKeys().forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  if(!DEMO){ try{await sb.from('jr_state').delete().eq('user_id',currentUser.id);}catch(e){} alert('Verilerin silindi. Hesabın tamamen kaldırılması için yöneticiyle iletişime geç.'); await doLogout(); }
+  else { let us=JSON.parse(localStorage.getItem('fxdesk_users')||'[]'); us=us.filter(x=>x.id!==currentUser.id); localStorage.setItem('fxdesk_users',JSON.stringify(us)); alert('Hesap silindi.'); doLogout(); }
+}
+/* bağlantılar */
+(function(){
+  const b=id=>document.getElementById(id);
+  if(b('set-pass-btn'))b('set-pass-btn').addEventListener('click',changePass);
+  if(b('set-logout'))b('set-logout').addEventListener('click',()=>doLogout());
+  document.querySelectorAll('#set-theme button').forEach(x=>x.addEventListener('click',()=>{applyTheme(x.dataset.th);settingsInit();}));
+  document.querySelectorAll('#set-accents button').forEach(x=>x.addEventListener('click',()=>{applyAccent(x.dataset.c);settingsInit();}));
+  if(b('set-trade-save'))b('set-trade-save').addEventListener('click',saveTradeSettings);
+  document.querySelectorAll('#set-calimp button').forEach(x=>x.addEventListener('click',()=>{
+    localStorage.setItem('fxdesk_cal_imp',x.dataset.i); calImp=x.dataset.i;
+    document.querySelectorAll('#set-calimp button').forEach(y=>y.classList.toggle('active',y===x));
+    document.querySelectorAll('#cal-imp button').forEach(y=>y.classList.toggle('active',y.dataset.imp===x.dataset.i));
+    try{renderCalendar();tickCalendar();}catch(e){}
+  }));
+  if(b('set-export'))b('set-export').addEventListener('click',exportJournal);
+  if(b('set-import'))b('set-import').addEventListener('change',e=>{const f=e.target.files[0];if(f)importJournal(f);});
+  if(b('set-clear'))b('set-clear').addEventListener('click',clearAll);
+  if(b('set-delacc'))b('set-delacc').addEventListener('click',delAccount);
+})();
+
 /* ---------- Sekme geçişi ---------- */
 function switchTab(tab){
   document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
@@ -2415,9 +2547,11 @@ function switchTab(tab){
   document.getElementById('view-feed').style.display    = tab==='feed'?'flex':'none';
   document.getElementById('view-journal').style.display = tab==='journal'?'flex':'none';
   const va=document.getElementById('view-admin'); if(va)va.style.display=tab==='admin'?'flex':'none';
+  const vs=document.getElementById('view-settings'); if(vs)vs.style.display=tab==='settings'?'flex':'none';
   if(tab==='feed')refreshFeed();
   if(tab==='journal'){ if(!DEMO){jrPullState().then(renderJournal);} else renderJournal(); }
   if(tab==='admin'){ if(!DEMO){sbLoadFeed().then(renderAdmin);} else renderAdmin(); }
+  if(tab==='settings')settingsInit();
   try{history.replaceState(null,'','#'+tab);}catch(e){}
 }
 document.querySelectorAll('#nav button:not(.soon)').forEach(b=>{
@@ -2426,7 +2560,7 @@ document.querySelectorAll('#nav button:not(.soon)').forEach(b=>{
 window.addEventListener('hashchange',()=>{
   if(!currentUser)return;
   const t=(location.hash||'').replace('#','');
-  if(['trade','feed','journal','admin'].includes(t)){ if(t==='admin'&&!(currentUser.isAdmin||currentUser.isMod))return; switchTab(t); }
+  if(['trade','feed','journal','admin','settings'].includes(t)){ if(t==='admin'&&!(currentUser.isAdmin||currentUser.isMod))return; switchTab(t); }
 });
 
 
@@ -2448,7 +2582,7 @@ function showApp(){
   if(!_loginCounted){_loginCounted=true;recordLogin(currentUser);}
   ensureProfileRow();
   let _t=(location.hash||'').replace('#','');
-  if(!['trade','feed','journal','admin'].includes(_t))_t='trade';
+  if(!['trade','feed','journal','admin','settings'].includes(_t))_t='trade';
   if(_t==='admin'&&!(currentUser.isAdmin||currentUser.isMod))_t='trade';
   switchTab(_t);
 }
