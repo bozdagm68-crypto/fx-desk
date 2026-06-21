@@ -1151,22 +1151,21 @@ function parseEvents(raw){
             .sort((a,b)=>a.date-b.date);
 }
 
-function fetchTimeout(url,ms){
+function fetchTimeout(url,ms,headers){
   const ctrl=new AbortController();
   const t=setTimeout(()=>ctrl.abort(),ms);
-  return fetch(url,{cache:'no-store',signal:ctrl.signal}).finally(()=>clearTimeout(t));
+  return fetch(url,{cache:'no-store',signal:ctrl.signal,headers:headers||{}}).finally(()=>clearTimeout(t));
 }
 async function loadCalendar(){
   // önce yedek veriyi hemen göster (panel asla boş/donuk kalmasın)
   if(!calEvents.length){ calEvents=parseEvents(FF_SAMPLE); renderCalendar(); tickCalendar(); }
   calStatus('güncelleniyor…');
   let raw=null;
-  const SRC=[FF_URL,
-    'https://api.codetabs.com/v1/proxy/?quest='+encodeURIComponent(FF_URL),
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(FF_URL),
-    'https://corsproxy.io/?url='+encodeURIComponent(FF_URL)];
-  for(const u of SRC){
-    try{ const r=await fetchTimeout(u,8000); if(!r.ok)continue; const j=JSON.parse(await r.text()); if(Array.isArray(j)&&j.length){raw=j;break;} }catch(e){}
+  const SRC=[];
+  if(typeof SUPABASE_URL!=='undefined'&&SUPABASE_URL)SRC.push({u:SUPABASE_URL+'/functions/v1/ff-calendar',h:{Authorization:'Bearer '+SUPABASE_ANON_KEY,apikey:SUPABASE_ANON_KEY}});
+  SRC.push({u:FF_URL},{u:'https://api.codetabs.com/v1/proxy/?quest='+encodeURIComponent(FF_URL)},{u:'https://api.allorigins.win/raw?url='+encodeURIComponent(FF_URL)},{u:'https://corsproxy.io/?url='+encodeURIComponent(FF_URL)});
+  for(const src of SRC){
+    try{ const r=await fetchTimeout(src.u,8000,src.h); if(!r.ok)continue; const j=JSON.parse(await r.text()); if(Array.isArray(j)&&j.length){raw=j;break;} }catch(e){}
   }
   if(raw && raw.length){ calEvents=parseEvents(raw); calStatus('canlı · '+fmtTime(new Date())+' güncellendi'); }
   else { calStatus('örnek veri (canlı veri alınamadı · yenilemek için tıkla)'); }
