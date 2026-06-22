@@ -738,6 +738,17 @@
 
   .cal-cell[data-day]{cursor:pointer}
   .cal-cell[data-day]:hover{filter:brightness(1.18)}
+
+  .jr-scorecard{display:flex;gap:16px;background:linear-gradient(135deg,var(--panel),var(--panel-2));border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:18px;align-items:center}
+  .jsc-left{flex:1;min-width:0}
+  .jsc-label{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted)}
+  .jsc-num{font-size:60px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+  .jsc-sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .jsc-share{background:var(--accent);color:#fff;border:none;padding:9px 16px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .jsc-share:hover{filter:brightness(1.1)}
+  .jsc-radar{width:240px;height:200px;flex-shrink:0}
+  .jsc-radar canvas{max-height:200px}
+  @media(max-width:680px){.jr-scorecard{flex-direction:column}.jsc-radar{width:100%}}
 </style>
 </head>
 <body>
@@ -912,6 +923,15 @@
       <div class="jr-profiles" id="jr-profiles"></div>
       <div class="jr-mt5sum" id="jr-mt5sum" style="display:none"></div>
       <div class="jr-stats" id="jr-stats"></div>
+      <div class="jr-scorecard" id="jr-scorecard">
+        <div class="jsc-left">
+          <div class="jsc-label">FX DESK SKORU</div>
+          <div class="jsc-num" id="jr-score-num">—</div>
+          <div class="jsc-sub">100 üzerinden · performans + disiplin</div>
+          <button id="jr-share-card" class="jsc-share">📤 Performans kartını paylaş</button>
+        </div>
+        <div class="jsc-radar"><canvas id="jr-radar"></canvas></div>
+      </div>
       <div class="jr-tablewrap" id="jr-tablewrap">
         <table class="jr-table">
           <thead><tr><th>Tarih</th><th>Parite</th><th>Yön</th><th>Giriş</th><th>Çıkış</th><th>SL</th><th>RR</th><th>P&amp;L</th><th>Strateji</th><th>Psik.</th><th></th></tr></thead>
@@ -1807,7 +1827,7 @@ const fmtR=v=>(v>=0?'+':'')+v.toFixed(2)+'R';
 function renderJournal(){
   ensureProfiles(); renderProfileCards();
   jrLoad(); jrPage=1;
-  renderMt5Summary(); renderJrStats(); renderJrTable(); renderJrCharts(); renderJrCalendar();
+  renderMt5Summary(); renderJrStats(); renderScore(); renderJrTable(); renderJrCharts(); renderJrCalendar();
 }
 
 function jrGoalsKey(){return 'fxdesk_goals_'+(currentUser?currentUser.id:'anon')+'_'+activeProfileId;}
@@ -2628,6 +2648,65 @@ function openDayModal(ds){
   if(c)c.addEventListener('click',()=>m.classList.remove('open'));
   if(m)m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
 })();
+
+/* ================= FX DESK SKORU + PERFORMANS KARTI ================= */
+function jrComputeScore(){
+  const ts=jrTrades.map(t=>({...t,...calcTrade(t)})).filter(t=>t.pnl!=null);
+  const n=ts.length;
+  if(!n)return {score:0,ax:[0,0,0,0,0],n:0,wr:0,pf:0,net:0};
+  const wins=ts.filter(t=>t.result==='win').length;
+  const wr=wins/n*100;
+  const gW=ts.filter(t=>t.pnl>0).reduce((s,t)=>s+t.pnl,0);
+  const gL=Math.abs(ts.filter(t=>t.pnl<0).reduce((s,t)=>s+t.pnl,0));
+  const pf=gL?gW/gL:(gW>0?3:0);
+  const rated=ts.filter(t=>t.rr!=null);
+  const avgR=rated.length?rated.reduce((s,t)=>s+t.rr,0)/rated.length:0;
+  const days={}; ts.forEach(t=>{days[t.date]=(days[t.date]||0)+t.pnl;});
+  const dv=Object.values(days); const cons=dv.length?dv.filter(v=>v>0).length/dv.length*100:0;
+  const byDate=[...ts].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.ts-b.ts);
+  let bal=jrBal(),peak=bal,maxdd=0; byDate.forEach(t=>{bal+=t.pnl;peak=Math.max(peak,bal);const dd=peak>0?(peak-bal)/peak*100:0;maxdd=Math.max(maxdd,dd);});
+  const risk=Math.max(0,100-maxdd*2);
+  const sWr=Math.min(100,wr), sPf=Math.min(100,pf*40), sRr=Math.max(0,Math.min(100,avgR*40+20)), sCons=Math.min(100,cons), sRisk=Math.min(100,risk);
+  const score=Math.round(sWr*0.25+sPf*0.25+sRr*0.15+sCons*0.15+sRisk*0.20);
+  return {score,ax:[Math.round(sWr),Math.round(sPf),Math.round(sRr),Math.round(sCons),Math.round(sRisk)],n,wr:Math.round(wr),pf,net:ts.reduce((s,t)=>s+t.pnl,0)};
+}
+let scoreChart=null;
+function renderScore(){
+  const box=document.getElementById('jr-scorecard'); if(!box)return;
+  const r=jrComputeScore();
+  const num=document.getElementById('jr-score-num');
+  num.textContent=r.n?r.score:'—';
+  num.style.color=!r.n?'var(--muted)':(r.score>=70?'var(--green)':(r.score>=40?'var(--gold)':'var(--red)'));
+  if(scoreChart){try{scoreChart.destroy();}catch(e){}}
+  if(window.Chart&&document.getElementById('jr-radar')){
+    scoreChart=new Chart(document.getElementById('jr-radar'),{type:'radar',
+      data:{labels:['Kazanç %','Profit Factor','Ort. RR','Tutarlılık','Risk Kontrolü'],datasets:[{data:r.ax,backgroundColor:'rgba(109,93,252,.18)',borderColor:'#6d5dfc',borderWidth:2,pointBackgroundColor:'#6d5dfc',pointRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,ticks:{display:false,stepSize:25},grid:{color:'rgba(150,150,150,.18)'},angleLines:{color:'rgba(150,150,150,.18)'},pointLabels:{color:'#9598a1',font:{size:10}}}}}});
+  }
+}
+function shareCard(){
+  const r=jrComputeScore(); const p=getActiveProfile();
+  const W=1000,H=560,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#0f1118');g.addColorStop(1,'#1c1740');x.fillStyle=g;x.fillRect(0,0,W,H);
+  x.fillStyle='#6d5dfc';x.fillRect(0,0,W,7);
+  x.fillStyle='#ffffff';x.font='bold 32px Arial';x.fillText('FX DESK',50,72);
+  x.fillStyle='#9598a1';x.font='16px Arial';x.fillText((p?p.name:'Trader')+' · performans kartı',50,100);
+  x.fillStyle=r.score>=70?'#26a69a':(r.score>=40?'#f0b90b':'#ef5350');x.font='bold 140px Arial';x.fillText(r.n?String(r.score):'—',50,260);
+  x.fillStyle='#9598a1';x.font='18px Arial';x.fillText('FX Desk Skoru / 100',56,300);
+  const stat=(l,v,col,X,Y)=>{x.fillStyle='#9598a1';x.font='16px Arial';x.fillText(l,X,Y);x.fillStyle=col;x.font='bold 36px Arial';x.fillText(v,X,Y+42);};
+  stat('Net P&L',(r.net>=0?'+':'')+Math.round(r.net).toLocaleString('tr-TR')+' $',r.net>=0?'#26a69a':'#ef5350',540,150);
+  stat('Kazanç Oranı','%'+r.wr,'#ffffff',540,235);
+  stat('Profit Factor',(r.pf===Infinity?'∞':r.pf.toFixed(2)),'#ffffff',540,320);
+  stat('İşlem',String(r.n),'#ffffff',540,405);
+  x.fillStyle='#5a5e6b';x.font='15px Arial';x.fillText('bozdagm68-crypto.github.io/fx-desk',50,H-28);
+  c.toBlob(async(blob)=>{
+    try{const file=new File([blob],'fxdesk-kart.png',{type:'image/png'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:'FX Desk performansım 📊 Skor: '+(r.n?r.score:'-')+'/100'});return;}}catch(e){}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fxdesk-kart.png';a.click();
+    window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent('FX Desk performansım 📊 FX Desk Skoru: '+(r.n?r.score:'-')+'/100\nbozdagm68-crypto.github.io/fx-desk'),'_blank');
+  },'image/png');
+}
+(function(){const b=document.getElementById('jr-share-card');if(b)b.addEventListener('click',shareCard);})();
 
 /* ---------- Sekme geçişi ---------- */
 function switchTab(tab){
