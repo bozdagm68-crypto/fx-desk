@@ -735,6 +735,9 @@
   .beta-thanks{color:var(--green);font-size:13px;margin-top:10px;font-weight:600}
 
   input[type=color].set-color{width:48px;height:30px;padding:0;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer}
+
+  .cal-cell[data-day]{cursor:pointer}
+  .cal-cell[data-day]:hover{filter:brightness(1.18)}
 </style>
 </head>
 <body>
@@ -923,6 +926,17 @@
         <div class="jr-chartbox"><h3>📅 Aylık Performans</h3><canvas id="ch-month"></canvas></div>
         <div class="jr-chartbox"><h3>💱 Paritelere Göre</h3><canvas id="ch-pair"></canvas></div>
         <div class="jr-chartbox"><h3>🎯 Stratejiye Göre</h3><canvas id="ch-strat"></canvas></div>
+      </div>
+    </div>
+
+    <!-- gün detay modalı -->
+    <div class="jr-modal-bg" id="jr-day-modal">
+      <div class="jr-modal" style="width:780px;max-width:96vw">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <h3 id="jr-day-title" style="margin:0;flex:1;font-size:15px"></h3>
+          <button class="cancel" id="jr-day-close" style="padding:6px 12px">Kapat</button>
+        </div>
+        <div id="jr-day-body" style="overflow:auto"></div>
       </div>
     </div>
 
@@ -2206,7 +2220,7 @@ function renderJrCalendar(){
       let inner=`<div class="cal-d">${cur.getDate()}</div>`;
       if(inM&&d){const wr=Math.round(d.w/d.n*100), ar=d.rc?(d.rs/d.rc):0;
         inner+=`<div class="cal-p">${fmtUSD(d.pnl)}</div><div class="cal-n">${d.n} işlem</div><div class="cal-sub">${fmtR(ar)} · %${wr}</div>`;}
-      cells+=`<td class="cal-cell ${!inM?'out':(d?(d.pnl>=0?'pos':'neg'):'')}">${inner}</td>`;
+      cells+=`<td class="cal-cell ${!inM?'out':(d?(d.pnl>=0?'pos':'neg'):'')}"${(inM&&d)?' data-day="'+ds+'"':''}>${inner}</td>`;
       cur.setDate(cur.getDate()+1);
     }
     const sc=wDays?(wPnl>=0?'pos':'neg'):'';
@@ -2222,6 +2236,7 @@ function renderJrCalendar(){
   document.getElementById('jcal-prev').onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderJrCalendar();};
   document.getElementById('jcal-next').onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderJrCalendar();};
   document.getElementById('jcal-today').onclick=()=>{calYear=new Date().getFullYear();calMonth=new Date().getMonth();renderJrCalendar();};
+  wrap.querySelectorAll('.cal-cell[data-day]').forEach(c=>c.addEventListener('click',()=>openDayModal(c.dataset.day)));
 }
 function setJrView(v){
   document.getElementById('jr-view-table').classList.toggle('active',v==='table');
@@ -2332,7 +2347,7 @@ function parseMT5Html(html){
       if(!ok){inpos=false;return;}
       const net=[N(c[c.length-1]),N(c[c.length-3]),N(c[c.length-2])].reduce((a,x)=>a+(x||0),0);
       out.push({id:'t'+Date.now()+'_'+(k++),date:c[0].slice(0,10).replace(/\./g,'-'),
-        pair:c[2],dir:c[3]==='sell'?'short':'long',entry:c[c.length-8],exit:c[c.length-4],sl:c[c.length-7],
+        pair:c[2],dir:c[3]==='sell'?'short':'long',entry:c[c.length-8],exit:c[c.length-4],sl:c[c.length-7],tp:c[c.length-6],
         risk:'',strategy:'MT5 import',emotion:3,plan:'',notes:'',img:null,ts:Date.now()+k,pnlImp:Math.round(net*100)/100});
     });
     return out;
@@ -2595,6 +2610,24 @@ async function renderFeedback(){
   box.querySelectorAll('[data-fb]').forEach(b=>b.addEventListener('click',async()=>{const id=b.dataset.fb;if(!confirm('Geri bildirimi sil?'))return;if(!DEMO){try{await sb.from('feedback').delete().eq('id',id);}catch(e){}}else{const a=JSON.parse(localStorage.getItem('fxdesk_feedback')||'[]').filter(x=>x.id!==id);localStorage.setItem('fxdesk_feedback',JSON.stringify(a));}renderFeedback();}));
 }
 (function(){const b=document.getElementById('beta-send'); if(b)b.addEventListener('click',sendFeedback);})();
+
+function openDayModal(ds){
+  const list=jrTrades.map(t=>({...t,...calcTrade(t)})).filter(t=>t.date===ds).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  const emo=['','😰','🙁','😐','🙂','😎'];
+  const dt=new Date(ds+'T00:00:00');
+  const title=dt.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
+  const net=list.reduce((s,t)=>s+(t.pnl||0),0);
+  const rows=list.map(t=>`<tr><td><b>${esc(t.pair||'')}</b></td><td><span class="jr-dir ${t.dir}">${t.dir==='short'?'Short':'Long'}</span></td><td>${t.entry||'-'}</td><td>${t.exit||'-'}</td><td>${t.sl||'-'}</td><td>${t.tp||'-'}</td><td class="${t.rr>=0?'pos':'neg'}">${t.rr==null?'-':fmtR(t.rr)}</td><td class="${(t.pnl||0)>=0?'pos':'neg'}">${t.pnl==null?'-':fmtUSD(t.pnl)}</td><td>${esc(t.strategy||'')}</td><td>${emo[t.emotion]||''}</td></tr>`).join('');
+  document.getElementById('jr-day-title').textContent=title+' — '+list.length+' işlem · '+(net>=0?'+':'')+Math.round(net).toLocaleString('tr-TR')+' $';
+  document.getElementById('jr-day-body').innerHTML='<table class="jr-table"><thead><tr><th>Parite</th><th>Yön</th><th>Giriş</th><th>Çıkış</th><th>SL</th><th>TP</th><th>RR</th><th>P&L</th><th>Strateji</th><th>Psik.</th></tr></thead><tbody>'+(rows||'<tr><td colspan="10">İşlem yok</td></tr>')+'</tbody></table>';
+  document.getElementById('jr-day-modal').classList.add('open');
+}
+(function(){
+  const m=document.getElementById('jr-day-modal');
+  const c=document.getElementById('jr-day-close');
+  if(c)c.addEventListener('click',()=>m.classList.remove('open'));
+  if(m)m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
+})();
 
 /* ---------- Sekme geçişi ---------- */
 function switchTab(tab){
