@@ -749,6 +749,21 @@
   .jsc-radar{width:240px;height:200px;flex-shrink:0}
   .jsc-radar canvas{max-height:200px}
   @media(max-width:680px){.jr-scorecard{flex-direction:column}.jsc-radar{width:100%}}
+
+  .jsc-copy{background:var(--panel-2);color:var(--text);border:1px solid var(--border);padding:9px 16px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:8px}
+  .jsc-copy:hover{border-color:var(--accent)}
+
+  .senti{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px}
+  .senti-head{font-size:13px;font-weight:700;margin-bottom:12px}
+  .senti-sub{font-size:11px;color:var(--muted);font-weight:400}
+  .senti-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+  .senti-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:5px}
+  .senti-top span{color:var(--muted);font-size:11px}
+  .senti-bar{height:8px;border-radius:5px;background:var(--red);overflow:hidden}
+  .senti-l{height:100%;background:var(--green)}
+  .senti-lbl{display:flex;justify-content:space-between;font-size:11px;margin-top:4px}
+  .senti-lbl .pos{color:var(--green)}.senti-lbl .neg{color:var(--red)}
+  @media(max-width:680px){.senti-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -874,6 +889,7 @@
           <button class="ff" data-f="neutral">Nötr</button>
         </div>
       </div>
+      <div class="senti" id="senti" style="display:none"></div>
 
       <!-- paylaşım oluştur -->
       <div class="compose">
@@ -928,7 +944,8 @@
           <div class="jsc-label">FX DESK SKORU</div>
           <div class="jsc-num" id="jr-score-num">—</div>
           <div class="jsc-sub">100 üzerinden · performans + disiplin</div>
-          <button id="jr-share-card" class="jsc-share">📤 Performans kartını paylaş</button>
+          <button id="jr-share-card" class="jsc-share">📤 Paylaş / İndir</button>
+          <button id="jr-copy-card" class="jsc-copy">📋 Kopyala</button>
         </div>
         <div class="jsc-radar"><canvas id="jr-radar"></canvas></div>
       </div>
@@ -1604,7 +1621,17 @@ function readAndResize(file,cb){
   r.readAsDataURL(file);
 }
 
+function renderSentiment(){
+  const box=document.getElementById('senti'); if(!box)return;
+  const agg={};
+  feed.forEach(p=>{ if(p.bias!=='long'&&p.bias!=='short')return; const k=p.symbol||'—'; const a=agg[k]||(agg[k]={l:0,s:0}); if(p.bias==='long')a.l++; else a.s++; });
+  const arr=Object.entries(agg).map(([sym,v])=>({sym,l:v.l,s:v.s,t:v.l+v.s})).filter(x=>x.t>0).sort((a,b)=>b.t-a.t).slice(0,6);
+  if(!arr.length){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML='<div class="senti-head">📊 Topluluk Sentimenti <span class="senti-sub">(paylaşımlara göre)</span></div><div class="senti-grid">'+arr.map(x=>{const lp=Math.round(x.l/x.t*100);return '<div class="senti-item"><div class="senti-top"><b>'+esc(x.sym)+'</b><span>'+x.t+' paylaşım</span></div><div class="senti-bar"><div class="senti-l" style="width:'+lp+'%"></div></div><div class="senti-lbl"><span class="pos">Long %'+lp+'</span><span class="neg">Short %'+(100-lp)+'</span></div></div>';}).join('')+'</div>';
+}
 function renderFeed(){
+  renderSentiment();
   const list=document.getElementById('feed-list');
   const items=feed.filter(p=>(feedFilter==='all'||p.bias===feedFilter)&&!hidden.has(p.id)).sort((a,b)=>b.ts-a.ts);
   list.innerHTML='';
@@ -2684,7 +2711,7 @@ function renderScore(){
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,ticks:{display:false,stepSize:25},grid:{color:'rgba(150,150,150,.18)'},angleLines:{color:'rgba(150,150,150,.18)'},pointLabels:{color:'#9598a1',font:{size:10}}}}}});
   }
 }
-function shareCard(){
+function makeCardCanvas(){
   const r=jrComputeScore(); const p=getActiveProfile();
   const W=1000,H=560,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
   const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#0f1118');g.addColorStop(1,'#1c1740');x.fillStyle=g;x.fillRect(0,0,W,H);
@@ -2699,14 +2726,27 @@ function shareCard(){
   stat('Profit Factor',(r.pf===Infinity?'∞':r.pf.toFixed(2)),'#ffffff',540,320);
   stat('İşlem',String(r.n),'#ffffff',540,405);
   x.fillStyle='#5a5e6b';x.font='15px Arial';x.fillText('bozdagm68-crypto.github.io/fx-desk',50,H-28);
-  c.toBlob(async(blob)=>{
+  return c;
+}
+function cardToBlob(cb){ makeCardCanvas().toBlob(cb,'image/png'); }
+function shareCard(){
+  const r=jrComputeScore();
+  cardToBlob(async(blob)=>{
     try{const file=new File([blob],'fxdesk-kart.png',{type:'image/png'});
       if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:'FX Desk performansım 📊 Skor: '+(r.n?r.score:'-')+'/100'});return;}}catch(e){}
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fxdesk-kart.png';a.click();
     window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent('FX Desk performansım 📊 FX Desk Skoru: '+(r.n?r.score:'-')+'/100\nbozdagm68-crypto.github.io/fx-desk'),'_blank');
-  },'image/png');
+  });
 }
-(function(){const b=document.getElementById('jr-share-card');if(b)b.addEventListener('click',shareCard);})();
+async function copyCard(){
+  if(!navigator.clipboard||!window.ClipboardItem){alert('Tarayıcın görsel kopyalamayı desteklemiyor. "Paylaş / İndir" ile PNG alabilirsin.');return;}
+  try{
+    const blob=await new Promise(res=>cardToBlob(res));
+    await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+    alert('✅ Performans kartı panoya kopyalandı! İstediğin yere Ctrl+V ile yapıştırabilirsin.');
+  }catch(e){ alert('Kopyalanamadı: '+(e.message||e)); }
+}
+(function(){const b=document.getElementById('jr-share-card');if(b)b.addEventListener('click',shareCard);const cc=document.getElementById('jr-copy-card');if(cc)cc.addEventListener('click',copyCard);})();
 
 /* ---------- Sekme geçişi ---------- */
 function switchTab(tab){
