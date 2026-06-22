@@ -775,6 +775,26 @@
   #toast-wrap{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:600;max-width:320px}
   .toast{background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--text);box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;transform:translateY(10px);transition:.3s}
   .toast.show{opacity:1;transform:translateY(0)}
+
+  #view-stats{flex-direction:column;overflow:auto}
+  .st-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .st-head h2{font-size:19px;font-weight:700}
+  .st-prof{font-size:12px;color:var(--muted);margin-left:auto}
+  .st-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .st-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px}
+  .st-card h3{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .st-card canvas{height:200px!important;max-height:200px}
+  .st-empty{padding:40px;text-align:center;color:var(--muted)}
+  .st-empty2{padding:30px 10px;text-align:center;color:var(--muted);font-size:12px}
+  .st-ls{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .st-ls-t{font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:6px}
+  .st-ls-v{font-size:13px;margin-bottom:3px}
+  .st-rec div{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)}
+  .st-rec span{color:var(--muted)}
+  .st-tw{overflow:auto}
+  .st-comm{font-size:13px;line-height:1.8;color:var(--text)}
+  .st-card .pos{color:var(--green)} .st-card .neg{color:var(--red)}
+  @media(max-width:760px){.st-grid2{grid-template-columns:1fr}.st-ls{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -786,7 +806,7 @@
     <button data-tab="feed">Paylaşımlar</button>
     <button data-tab="journal">Journal</button>
     <button data-tab="admin" id="nav-admin" style="display:none">🛡 Admin</button>
-    <button class="soon" disabled>İstatistik <span class="badge">yakında</span></button>
+    <button data-tab="stats">İstatistik</button>
     <button data-tab="settings">Ayarlar</button>
     <button data-tab="beta">🧪 Beta</button>
   </nav>
@@ -1112,6 +1132,12 @@
         <button id="beta-send">Gönder</button>
         <div id="beta-thanks" class="beta-thanks" style="display:none">✅ Teşekkürler! Geri bildirimin bize ulaştı.</div>
       </div>
+    </div>
+  </section>
+  <section id="view-stats" class="view" style="display:none">
+    <div class="set-wrap" style="max-width:1000px">
+      <div class="st-head"><h2>📊 İstatistik</h2><span class="st-prof">Profil: <b id="st-profile">—</b></span></div>
+      <div id="st-body"></div>
     </div>
   </section>
 </main>
@@ -2351,15 +2377,15 @@ function parseMT5Summary(t){
 }
 function parsePropStatement(t){
   t=t.replace(/[‑–−]/g,'-');
-  const rx=/(\d{5,}:\d{4,})\s+(\d{2}\/\d{2}\/\d{4})\s+\d{1,2}:\d{2}\s+(Buy|Sell)\s+([\d.,]+)\s+([A-Z]{3,})\s+([\d.,]+)\s+\d+\s+(—|-?[\d.,]+)\s+(-?[\d.,]+)/g;
+  const rx=/(\d{5,}:\d{4,})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{1,2}:\d{2})\s+(Buy|Sell)\s+([\d.,]+)\s+([A-Z]{3,})\s+([\d.,]+)\s+\d+\s+(—|-?[\d.,]+)\s+(-?[\d.,]+)/g;
   const num=v=>{const x=parseFloat(String(v).replace(/,/g,''));return isNaN(x)?null:x;};
   const out=[]; let m,k=0;
   while((m=rx.exec(t))){
-    if(m[7]==='—')continue;
-    const sp=num(m[7]); if(sp==null)continue;
-    const cm=num(m[8])||0;
+    if(m[8]==='—')continue;
+    const sp=num(m[8]); if(sp==null)continue;
+    const cm=num(m[9])||0;
     const dd=m[2].split('/'); const date=dd[2]+'-'+dd[1]+'-'+dd[0];
-    out.push({id:'t'+Date.now()+'_'+(k++),date,pair:m[5],dir:m[3]==='Sell'?'short':'long',
+    out.push({id:'t'+Date.now()+'_'+(k++),date,time:m[3],pair:m[6],dir:m[4]==='Sell'?'short':'long',
       entry:'',exit:'',sl:'',risk:'',strategy:'Fon import',emotion:3,plan:'',notes:'',img:null,
       ts:Date.now()+k,pnlImp:Math.round((sp-cm)*100)/100});
   }
@@ -2421,7 +2447,7 @@ function parseMT5Html(html){
       const ok=(c.length===13||c.length===14)&&(c[3]==='buy'||c[3]==='sell')&&/^\d{4}/.test(c[0])&&N(c[c.length-8])!=null;
       if(!ok){inpos=false;return;}
       const net=[N(c[c.length-1]),N(c[c.length-3]),N(c[c.length-2])].reduce((a,x)=>a+(x||0),0);
-      out.push({id:'t'+Date.now()+'_'+(k++),date:c[0].slice(0,10).replace(/\./g,'-'),
+      out.push({id:'t'+Date.now()+'_'+(k++),date:c[0].slice(0,10).replace(/\./g,'-'),time:(c[0].slice(11,16)||''),
         pair:c[2],dir:c[3]==='sell'?'short':'long',entry:c[c.length-8],exit:c[c.length-4],sl:c[c.length-7],tp:c[c.length-6],
         risk:'',strategy:'MT5 import',emotion:3,plan:'',notes:'',img:null,ts:Date.now()+k,pnlImp:Math.round(net*100)/100});
     });
@@ -2829,6 +2855,88 @@ function alarmCheck(){
 setInterval(alarmCheck,30000);
 (function(){const b=document.getElementById('cal-bell'); if(b)b.addEventListener('click',toggleAlarm); updateBell();})();
 
+/* ================= İSTATİSTİK ================= */
+let statsCharts={};
+function destroyStats(){Object.values(statsCharts).forEach(c=>{try{c.destroy();}catch(e){}});statsCharts={};}
+function stProfStats(pid){
+  try{const a=JSON.parse(localStorage.getItem('fxdesk_journal_'+(currentUser?currentUser.id:'anon')+'_'+pid))||[];
+    const t=a.map(x=>({...x,...calcTrade(x)})).filter(x=>x.pnl!=null);
+    const n=t.length,w=t.filter(x=>x.result==='win').length,net=t.reduce((s,x)=>s+x.pnl,0);
+    return {n,net,wr:n?Math.round(w/n*100):0};
+  }catch(e){return {n:0,net:0,wr:0};}
+}
+function renderStats(){
+  destroyStats();
+  const prof=getActiveProfile();
+  const pe=document.getElementById('st-profile'); if(pe)pe.textContent=prof?prof.name:'—';
+  const body=document.getElementById('st-body'); if(!body)return;
+  const ts=jrTrades.map(t=>({...t,...calcTrade(t)})).filter(t=>t.pnl!=null);
+  if(!ts.length){body.innerHTML='<div class="st-empty">Bu profilde işlem yok. Journal\'dan rapor yükle ya da işlem ekle.</div>';return;}
+  const f$=v=>(v>=0?'+':'')+Math.round(v).toLocaleString('tr-TR')+' $';
+  const byDate=[...ts].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.ts-b.ts);
+  // hesaplar
+  const n=ts.length, wins=ts.filter(t=>t.result==='win'), losses=ts.filter(t=>t.result==='loss');
+  const net=ts.reduce((s,t)=>s+t.pnl,0);
+  const avgWin=wins.length?wins.reduce((s,t)=>s+t.pnl,0)/wins.length:0;
+  const avgLoss=losses.length?Math.abs(losses.reduce((s,t)=>s+t.pnl,0)/losses.length):0;
+  const exp=n?net/n:0;
+  let lw=0,ll=0,cw=0,cl=0; byDate.forEach(t=>{if(t.result==='win'){cw++;cl=0;lw=Math.max(lw,cw);}else if(t.result==='loss'){cl++;cw=0;ll=Math.max(ll,cl);}});
+  const best=ts.reduce((a,b)=>b.pnl>a.pnl?b:a), worst=ts.reduce((a,b)=>b.pnl<a.pnl?b:a);
+  // gün
+  const dow=[0,0,0,0,0,0,0]; ts.forEach(t=>{const d=new Date(t.date+'T00:00:00');if(!isNaN(d))dow[(d.getDay()+6)%7]+=t.pnl;});
+  // saat
+  const hod={}; ts.forEach(t=>{if(t.time){const h=parseInt(t.time);if(!isNaN(h))hod[h]=(hod[h]||0)+t.pnl;}});
+  const hasHour=Object.keys(hod).length>0;
+  // long/short
+  const ls=d=>{const a=ts.filter(t=>t.dir===d);const w=a.filter(t=>t.result==='win').length;return {n:a.length,net:a.reduce((s,t)=>s+t.pnl,0),wr:a.length?Math.round(w/a.length*100):0};};
+  const lng=ls('long'), shr=ls('short');
+  // RR dağılımı
+  const rrTs=ts.filter(t=>t.rr!=null);
+  const buckets=['<-2','-2/-1','-1/0','0/1','1/2','2/3','>3']; const bc=[0,0,0,0,0,0,0];
+  rrTs.forEach(t=>{const r=t.rr;let i; if(r<-2)i=0;else if(r<-1)i=1;else if(r<0)i=2;else if(r<1)i=3;else if(r<2)i=4;else if(r<3)i=5;else i=6;bc[i]++;});
+  // drawdown
+  let bal=jrBal(),peak=bal; const ddArr=byDate.map(t=>{bal+=t.pnl;peak=Math.max(peak,bal);return +(peak>0?(bal-peak)/peak*100:0).toFixed(2);});
+  // parite
+  const pAgg={}; ts.forEach(t=>{const k=t.pair||'—';const o=pAgg[k]||(pAgg[k]={n:0,w:0,net:0,rs:0,rc:0});o.n++;if(t.result==='win')o.w++;o.net+=t.pnl;if(t.rr!=null){o.rs+=t.rr;o.rc++;}});
+  // aylık
+  const mAgg={}; ts.forEach(t=>{const k=(t.date||'').slice(0,7);if(k){const o=mAgg[k]||(mAgg[k]={n:0,w:0,net:0});o.n++;if(t.result==='win')o.w++;o.net+=t.pnl;}});
+  // topluluk
+  const cAgg={}; (typeof feed!=='undefined'?feed:[]).forEach(p=>{const k=p.symbol||'—';cAgg[k]=(cAgg[k]||0)+1;});
+  const cTop=Object.entries(cAgg).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const card=(t,inner)=>'<div class="st-card"><h3>'+t+'</h3>'+inner+'</div>';
+  const cls=v=>v>=0?'pos':'neg';
+  let h='';
+  h+='<div class="st-grid2">'+card('📅 Haftanın Günleri','<canvas id="st-dow"></canvas>')+card('⏰ Saat Bazlı (giriş saati)',hasHour?'<canvas id="st-hour"></canvas>':'<div class="st-empty2">Bu profilde saat verisi yok (manuel işlemler veya saatsiz import).</div>')+'</div>';
+  h+='<div class="st-grid2">'+card('🎯 RR Dağılımı',rrTs.length?'<canvas id="st-rr"></canvas>':'<div class="st-empty2">RR verisi yok (giriş/çıkış/stop gerekir).</div>')+card('📉 Drawdown (%)','<canvas id="st-dd"></canvas>')+'</div>';
+  h+='<div class="st-grid2">';
+  h+=card('↕️ Long vs Short','<div class="st-ls"><div><div class="st-ls-t pos">LONG</div><div class="st-ls-v">'+lng.n+' işlem</div><div class="st-ls-v">Kazanç %'+lng.wr+'</div><div class="st-ls-v '+cls(lng.net)+'">'+f$(lng.net)+'</div></div><div><div class="st-ls-t neg">SHORT</div><div class="st-ls-v">'+shr.n+' işlem</div><div class="st-ls-v">Kazanç %'+shr.wr+'</div><div class="st-ls-v '+cls(shr.net)+'">'+f$(shr.net)+'</div></div></div>');
+  h+=card('🏅 Seriler & Rekorlar','<div class="st-rec"><div><span>En uzun kazanç serisi</span><b class="pos">'+lw+'</b></div><div><span>En uzun kayıp serisi</span><b class="neg">'+ll+'</b></div><div><span>En iyi işlem</span><b class="pos">'+f$(best.pnl)+'</b></div><div><span>En kötü işlem</span><b class="neg">'+f$(worst.pnl)+'</b></div><div><span>Ort. kazanç</span><b class="pos">'+f$(avgWin)+'</b></div><div><span>Ort. kayıp</span><b class="neg">'+f$(-avgLoss)+'</b></div><div><span>Beklenti (işlem başı)</span><b class="'+cls(exp)+'">'+f$(exp)+'</b></div></div>');
+  h+='</div>';
+  // parite tablo
+  const pk=Object.keys(pAgg).sort((a,b)=>pAgg[b].net-pAgg[a].net);
+  h+=card('💱 Paritelere Göre','<div class="st-tw"><table class="jr-table"><thead><tr><th>Parite</th><th>İşlem</th><th>Kazanç %</th><th>Ort. RR</th><th>Net</th></tr></thead><tbody>'+pk.map(k=>{const o=pAgg[k];return '<tr><td><b>'+esc(k)+'</b></td><td>'+o.n+'</td><td>%'+Math.round(o.w/o.n*100)+'</td><td>'+(o.rc?fmtR(o.rs/o.rc):'-')+'</td><td class="'+cls(o.net)+'">'+f$(o.net)+'</td></tr>';}).join('')+'</tbody></table></div>');
+  // aylık tablo
+  const mk=Object.keys(mAgg).sort();
+  h+=card('🗓 Aylık Performans','<div class="st-tw"><table class="jr-table"><thead><tr><th>Ay</th><th>İşlem</th><th>Kazanç %</th><th>Net</th></tr></thead><tbody>'+mk.map(k=>{const o=mAgg[k];return '<tr><td>'+k+'</td><td>'+o.n+'</td><td>%'+Math.round(o.w/o.n*100)+'</td><td class="'+cls(o.net)+'">'+f$(o.net)+'</td></tr>';}).join('')+'</tbody></table></div>');
+  // profil karşılaştırma
+  h+=card('📂 Profil Karşılaştırma','<div class="st-tw"><table class="jr-table"><thead><tr><th>Profil</th><th>İşlem</th><th>Kazanç %</th><th>Net</th></tr></thead><tbody>'+_profiles.map(p=>{const o=stProfStats(p.id);return '<tr><td><b>'+esc(p.name)+'</b></td><td>'+o.n+'</td><td>%'+o.wr+'</td><td class="'+cls(o.net)+'">'+f$(o.net)+'</td></tr>';}).join('')+'</tbody></table></div>');
+  // topluluk
+  h+=card('📣 Topluluk','<div class="st-comm">Toplam paylaşım: <b>'+(typeof feed!=='undefined'?feed.length:0)+'</b><br>En çok paylaşılan pariteler:<br>'+(cTop.length?cTop.map(x=>esc(x[0])+' ('+x[1]+')').join(' · '):'—')+'</div>');
+  body.innerHTML=h;
+
+  // grafikler
+  const AX={color:'#9598a1',font:{size:10}}, GR={color:'rgba(150,150,150,.15)'};
+  const opt={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:AX,grid:GR},y:{ticks:AX,grid:GR}}};
+  const col=arr=>arr.map(v=>v>=0?'#26a69a':'#ef5350');
+  if(window.Chart){
+    statsCharts.dow=new Chart(document.getElementById('st-dow'),{type:'bar',data:{labels:['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'],datasets:[{data:dow,backgroundColor:col(dow)}]},options:opt});
+    if(hasHour){const hl=[];const hv=[];for(let i=0;i<24;i++){hl.push(i+':00');hv.push(hod[i]||0);}statsCharts.hour=new Chart(document.getElementById('st-hour'),{type:'bar',data:{labels:hl,datasets:[{data:hv,backgroundColor:col(hv)}]},options:opt});}
+    if(rrTs.length)statsCharts.rr=new Chart(document.getElementById('st-rr'),{type:'bar',data:{labels:buckets,datasets:[{data:bc,backgroundColor:'#6d5dfc'}]},options:opt});
+    statsCharts.dd=new Chart(document.getElementById('st-dd'),{type:'line',data:{labels:ddArr.map((_,i)=>i+1),datasets:[{data:ddArr,borderColor:'#ef5350',backgroundColor:'rgba(239,83,80,.12)',fill:true,pointRadius:0,tension:.2}]},options:opt});
+  }
+}
+
 /* ---------- Sekme geçişi ---------- */
 function switchTab(tab){
   document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
@@ -2838,10 +2946,12 @@ function switchTab(tab){
   const va=document.getElementById('view-admin'); if(va)va.style.display=tab==='admin'?'flex':'none';
   const vs=document.getElementById('view-settings'); if(vs)vs.style.display=tab==='settings'?'flex':'none';
   const vb=document.getElementById('view-beta'); if(vb)vb.style.display=tab==='beta'?'flex':'none';
+  const vst=document.getElementById('view-stats'); if(vst)vst.style.display=tab==='stats'?'flex':'none';
   if(tab==='feed')refreshFeed();
   if(tab==='journal'){ if(!DEMO){jrPullState().then(renderJournal);} else renderJournal(); }
   if(tab==='admin'){ if(!DEMO){sbLoadFeed().then(renderAdmin);} else renderAdmin(); }
   if(tab==='settings')settingsInit();
+  if(tab==='stats'){ const go=()=>{ensureProfiles();jrLoad();renderStats();}; if(!DEMO){Promise.all([jrPullState(),sbLoadFeed()]).then(go);} else {loadFeed();go();} }
   try{history.replaceState(null,'','#'+tab);}catch(e){}
 }
 document.querySelectorAll('#nav button:not(.soon)').forEach(b=>{
@@ -2850,7 +2960,7 @@ document.querySelectorAll('#nav button:not(.soon)').forEach(b=>{
 window.addEventListener('hashchange',()=>{
   if(!currentUser)return;
   const t=(location.hash||'').replace('#','');
-  if(['trade','feed','journal','admin','settings','beta'].includes(t)){ if(t==='admin'&&!(currentUser.isAdmin||currentUser.isMod))return; switchTab(t); }
+  if(['trade','feed','journal','admin','settings','beta','stats'].includes(t)){ if(t==='admin'&&!(currentUser.isAdmin||currentUser.isMod))return; switchTab(t); }
 });
 
 
@@ -2872,7 +2982,7 @@ function showApp(){
   if(!_loginCounted){_loginCounted=true;recordLogin(currentUser);}
   ensureProfileRow();
   let _t=(location.hash||'').replace('#','');
-  if(!['trade','feed','journal','admin','settings','beta'].includes(_t))_t='trade';
+  if(!['trade','feed','journal','admin','settings','beta','stats'].includes(_t))_t='trade';
   if(_t==='admin'&&!(currentUser.isAdmin||currentUser.isMod))_t='trade';
   switchTab(_t);
 }
