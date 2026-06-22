@@ -764,6 +764,11 @@
   .senti-lbl{display:flex;justify-content:space-between;font-size:11px;margin-top:4px}
   .senti-lbl .pos{color:var(--green)}.senti-lbl .neg{color:var(--red)}
   @media(max-width:680px){.senti-grid{grid-template-columns:1fr}}
+
+  .rk-out{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;font-size:13px;line-height:1.8}
+  .rk-out .rk-lot{color:var(--accent);font-size:19px}
+  .rk-out .rk-muted{color:var(--muted)}
+  .rk-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -839,7 +844,7 @@
       <span class="lbl">Hızlı sembol:</span>
       <div class="sym-list" id="sym-list"></div>
       <button class="sym-add" id="sym-add" title="Sembol ekle">+</button>
-      <div class="chart-modes"><button id="cm-single" class="active">◻ Tek</button><button id="cm-grid">🔲 4'lü</button><button id="cm-panel" title="Takvim/Sözlük panelini gizle/göster">📅 Panel</button></div>
+      <div class="chart-modes"><button id="cm-single" class="active">◻ Tek</button><button id="cm-grid">🔲 4'lü</button><button id="cm-panel" title="Takvim/Sözlük panelini gizle/göster">📅 Panel</button><button id="risk-btn" title="Risk / Lot hesaplayıcı">🧮 Risk</button></div>
     </div>
     <div id="chart-wrap"><div id="tv_chart"></div><div id="chart-grid" style="display:none"></div></div>
   </section>
@@ -1107,6 +1112,22 @@
 
 <!-- görsel büyütme -->
 <div class="lightbox" id="lightbox"><img id="lb-img" src="" alt="" /></div>
+
+<!-- Risk / Lot hesaplayıcı modalı -->
+<div class="modal-bg" id="risk-modal">
+  <div class="modal" style="width:420px">
+    <h3>🧮 Risk / Lot Hesaplayıcı</h3>
+    <label>Hesap bakiyesi ($)</label><input id="rk-bal" type="number" value="10000">
+    <label>Risk (%)</label><input id="rk-risk" type="number" value="1" step="any">
+    <label>Giriş fiyatı</label><input id="rk-entry" type="number" step="any">
+    <label>Stop fiyatı</label><input id="rk-stop" type="number" step="any">
+    <label>Enstrüman (1 lot kaç birim)</label>
+    <select id="rk-contract"><option value="100000">Forex (1 lot = 100.000 birim)</option><option value="100">Altın XAU (1 lot = 100 oz)</option><option value="1">Kripto (1 lot = 1 coin)</option></select>
+    <div class="rk-out" id="rk-out"></div>
+    <p class="rk-note">Not: USD karşıtlı pariteler (EUR/USD, XAU/USD, BTC/USD...) için doğru hesaplar. USD/JPY gibi karşıtı USD olmayanlarda yaklaşıktır.</p>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="cancel" id="rk-close">Kapat</button></div>
+  </div>
+</div>
 
 <!-- Sembol ekleme modalı -->
 <div class="modal-bg" id="modal-bg">
@@ -2747,6 +2768,30 @@ async function copyCard(){
   }catch(e){ alert('Kopyalanamadı: '+(e.message||e)); }
 }
 (function(){const b=document.getElementById('jr-share-card');if(b)b.addEventListener('click',shareCard);const cc=document.getElementById('jr-copy-card');if(cc)cc.addEventListener('click',copyCard);})();
+
+/* ---- Risk / Lot hesaplayıcı ---- */
+function riskCalc(){
+  const bal=+document.getElementById('rk-bal').value||0;
+  const rp=+document.getElementById('rk-risk').value||0;
+  const e=+document.getElementById('rk-entry').value;
+  const st=+document.getElementById('rk-stop').value;
+  const cs=+document.getElementById('rk-contract').value||100000;
+  const out=document.getElementById('rk-out');
+  const riskUsd=bal*rp/100;
+  const f=v=>v.toLocaleString('tr-TR',{maximumFractionDigits:2});
+  if(!e||!st||e===st){out.innerHTML='<span class="rk-muted">Risk tutarı: <b>'+f(riskUsd)+' $</b><br>Giriş ve stop gir → lot otomatik hesaplanır.</span>';return;}
+  const dist=Math.abs(e-st);
+  const units=dist?riskUsd/dist:0;
+  const lot=units/cs;
+  out.innerHTML='Risk tutarı: <b>'+f(riskUsd)+' $</b><br>Stop mesafesi: <b>'+dist+'</b><br>Pozisyon: <b>'+Math.round(units).toLocaleString('tr-TR')+' birim</b><br>Önerilen lot: <b class="rk-lot">'+lot.toFixed(2)+'</b>';
+}
+(function(){
+  const open=document.getElementById('risk-btn'), m=document.getElementById('risk-modal'), cl=document.getElementById('rk-close');
+  if(open)open.addEventListener('click',()=>{m.classList.add('open');riskCalc();});
+  if(cl)cl.addEventListener('click',()=>m.classList.remove('open'));
+  if(m)m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
+  ['rk-bal','rk-risk','rk-entry','rk-stop','rk-contract'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',riskCalc);});
+})();
 
 /* ---------- Sekme geçişi ---------- */
 function switchTab(tab){
