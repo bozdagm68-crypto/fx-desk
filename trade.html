@@ -290,6 +290,10 @@
   .bias.neutral{background:rgba(240,185,11,.16);color:var(--gold)}
   .post-text{font-size:13.5px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
   .post-img{width:100%;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;display:block;margin-bottom:12px}
+  .post-gallery{display:grid;gap:6px;margin-bottom:12px}
+  .post-gallery.g2{grid-template-columns:1fr 1fr}
+  .post-gallery.g3{grid-template-columns:1fr 1fr 1fr}
+  .post-gallery .post-img{margin:0;height:100%;aspect-ratio:4/3;object-fit:cover}
 
   .votes{display:flex;gap:8px;margin-bottom:4px}
   .vote{flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;cursor:pointer;position:relative;overflow:hidden;font-family:inherit;color:var(--text);font-size:12.5px;font-weight:600;transition:.12s}
@@ -369,8 +373,10 @@
   /* compose: otomatik kullanıcı + yapıştır/sil */
   .c-asuser{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:5px;white-space:nowrap}
   .c-asuser b{color:var(--text)}
+  .pv-grid{display:flex;flex-wrap:wrap;gap:8px}
   .pv-wrap{position:relative;display:inline-block}
   .pv-wrap img{max-width:240px;border-radius:8px;border:1px solid var(--border);display:block}
+  .pv-grid .pv-wrap img{max-width:150px;max-height:110px;object-fit:cover}
   .pv-del{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
   .pv-del:hover{background:var(--red)}
 
@@ -1092,8 +1098,8 @@
         </div>
         <textarea id="c-text" class="c-area" placeholder="Analizini / bias'ını yaz... (örn. EUR/USD 1.0820 desteğinden 1.0910'a kadar yükseliş bekliyorum)"></textarea>
         <div class="compose-foot">
-          <label class="upload">📎 Ekran görüntüsü ekle
-            <input type="file" id="c-img" accept="image/*" hidden />
+          <label class="upload">📎 Ekran görüntüsü ekle (3'e kadar)
+            <input type="file" id="c-img" accept="image/*" multiple hidden />
           </label>
           <span class="imgname" id="c-imgname">veya alana <b style="color:var(--text)">Ctrl+V</b> ile yapıştır</span>
           <button id="c-post" class="post-btn">Paylaş</button>
@@ -1788,8 +1794,13 @@ let feed=loadFeed();
 let myVotes=loadVotes();
 let composeBias='long';
 let composeSym='';
-let composeImg=null;
+let composeImgs=[];           // paylaşıma eklenen görseller (en fazla 3)
+const MAX_IMGS=3;
 let feedFilter='all';
+/* bir paylaşımın görsellerini normalize et: yeni çoklu (imgs[]) + eski tekli (img) uyumlu */
+function postImgs(p){ if(Array.isArray(p.imgs))return p.imgs; return p.img?[p.img]:[]; }
+/* Supabase img_url → dizi (çoklu görseller JSON dizi olarak saklanır, tekli düz URL) */
+function parseImgUrl(u){ if(!u)return []; if(typeof u==='string'&&u[0]==='['){try{const a=JSON.parse(u);if(Array.isArray(a))return a;}catch(e){}} return [u]; }
 const openComments=new Set();
 const hidden=new Set(JSON.parse(localStorage.getItem('fxdesk_hidden')||'[]'));
 function reportPost(id){
@@ -1832,7 +1843,7 @@ async function updatePost(id,newText){
   newText=(newText||'').trim();
   const p=feed.find(x=>x.id===id); if(!p||!currentUser)return;
   if(!(p.uid&&p.uid===currentUser.id)){alert('Bu paylaşımı düzenleme yetkin yok.');return;}
-  if(!newText&&!p.img){alert('Metin boş olamaz.');return;}
+  if(!newText&&!postImgs(p).length){alert('Metin boş olamaz.');return;}
   p.text=newText;
   if(!DEMO){try{const {error}=await sb.from('posts').update({text:newText}).eq('id',id);if(error)throw error;}catch(e){alert('Kaydedilemedi: '+(e.message||e));}}
   else saveFeed();
@@ -1920,7 +1931,7 @@ function renderFeed(){
         </div>
       </div>
       ${p.text?`<div class="post-text">${esc(p.text)}</div>`:''}
-      ${p.img?`<img class="post-img" src="${p.img}" alt="setup">`:''}
+      ${(()=>{const ims=postImgs(p);if(!ims.length)return '';if(ims.length===1)return `<img class="post-img" src="${ims[0]}" alt="setup">`;return `<div class="post-gallery g${ims.length}">`+ims.map(s=>`<img class="post-img" src="${s}" alt="setup">`).join('')+`</div>`;})()}
       <div class="votes">
         <button class="vote agree ${mine==='agree'?'sel':''}" data-v="agree"><span class="vbar" style="width:${pct(p.votes.agree)}%"></span><span class="vlabel"><span>👍 Katılıyorum</span><span class="vcount">${p.votes.agree} · %${pct(p.votes.agree)}</span></span></button>
         <button class="vote disagree ${mine==='disagree'?'sel':''}" data-v="disagree"><span class="vbar" style="width:${pct(p.votes.disagree)}%"></span><span class="vlabel"><span>👎 Katılmıyorum</span><span class="vcount">${p.votes.disagree} · %${pct(p.votes.disagree)}</span></span></button>
@@ -1937,7 +1948,7 @@ function renderFeed(){
         <div class="cm-add"><input placeholder="Yorum yaz..." /><button>Gönder</button></div>
       </div>`;
     card.querySelectorAll('.vote').forEach(btn=>btn.addEventListener('click',()=>vote(p.id,btn.dataset.v)));
-    const im=card.querySelector('.post-img'); if(im)im.addEventListener('click',()=>openLightbox(p.img));
+    card.querySelectorAll('.post-img').forEach(im=>im.addEventListener('click',()=>openLightbox(im.getAttribute('src'))));
     const tg=card.querySelector('.cm-toggle'), cm=card.querySelector('.comments');
     tg.addEventListener('click',()=>{openComments.has(p.id)?openComments.delete(p.id):openComments.add(p.id);cm.classList.toggle('open');});
     const cin=card.querySelector('.cm-add input'), cbtn=card.querySelector('.cm-add button');
@@ -1996,24 +2007,29 @@ document.getElementById('c-sym').addEventListener('input',e=>{
   if(e.target.value.trim()){document.querySelectorAll('.spx').forEach(x=>x.classList.remove('sel'));composeSym='';}
 });
 
-/* görsel önizleme + sil */
+/* görsel önizleme + sil (çoklu, en fazla 3) */
 function renderComposePreview(){
   const pv=document.getElementById('c-preview');
-  if(composeImg){
-    pv.innerHTML=`<div class="pv-wrap"><img src="${composeImg}"><button class="pv-del" title="Görseli kaldır">×</button></div>`;
-    pv.querySelector('.pv-del').addEventListener('click',clearComposeImg);
+  if(composeImgs.length){
+    pv.innerHTML=`<div class="pv-grid">`+composeImgs.map((src,i)=>`<div class="pv-wrap"><img src="${src}"><button class="pv-del" data-i="${i}" title="Görseli kaldır">×</button></div>`).join('')+`</div>`;
+    pv.querySelectorAll('.pv-del').forEach(b=>b.addEventListener('click',()=>removeComposeImg(+b.dataset.i)));
   } else pv.innerHTML='';
 }
-function setComposeImg(data,label){
-  composeImg=data;
-  document.getElementById('c-imgname').textContent=label||'görsel eklendi';
-  renderComposePreview();
+function updateImgName(){
+  const nm=document.getElementById('c-imgname');
+  if(composeImgs.length>=MAX_IMGS) nm.textContent=MAX_IMGS+'/'+MAX_IMGS+' görsel — sınıra ulaşıldı';
+  else if(composeImgs.length) nm.textContent=composeImgs.length+'/'+MAX_IMGS+' görsel eklendi';
+  else nm.innerHTML='veya alana <b style="color:var(--text)">Ctrl+V</b> ile yapıştır';
 }
-function clearComposeImg(){
-  composeImg=null;
+function removeComposeImg(i){
+  composeImgs.splice(i,1);
   document.getElementById('c-img').value='';
-  document.getElementById('c-imgname').innerHTML='veya alana <b style="color:var(--text)">Ctrl+V</b> ile yapıştır';
-  renderComposePreview();
+  updateImgName(); renderComposePreview();
+}
+function clearComposeImgs(){
+  composeImgs=[];
+  document.getElementById('c-img').value='';
+  updateImgName(); renderComposePreview();
 }
 
 /* ---- İçerik denetimi (müstehcen görsel tespiti) ---- */
@@ -2041,21 +2057,27 @@ async function isImageSafe(dataUrl){
 }
 function addComposeImage(file,label){
   const nm=document.getElementById('c-imgname');
+  if(composeImgs.length>=MAX_IMGS){ nm.textContent='En fazla '+MAX_IMGS+' görsel ekleyebilirsin.'; return; }
   nm.textContent='🔍 görsel kontrol ediliyor...';
   readAndResize(file,async data=>{
     const r=await isImageSafe(data);
     if(!r.safe){
-      composeImg=null; renderComposePreview();
+      renderComposePreview();
       nm.innerHTML='⛔ <span style="color:var(--red)">Uygunsuz içerik algılandı — görsel eklenmedi.</span> Lütfen yalnızca grafik/analiz görseli paylaş.';
       return;
     }
-    setComposeImg(data,label);
+    if(composeImgs.length>=MAX_IMGS){ updateImgName(); return; }
+    composeImgs.push(data);
+    updateImgName(); renderComposePreview();
   });
 }
 
 document.getElementById('c-img').addEventListener('change',e=>{
-  const f=e.target.files[0];if(!f)return;
-  addComposeImage(f,f.name);
+  const files=[...e.target.files];if(!files.length)return;
+  const room=MAX_IMGS-composeImgs.length;
+  if(room<=0){ document.getElementById('c-imgname').textContent='En fazla '+MAX_IMGS+' görsel ekleyebilirsin.'; e.target.value=''; return; }
+  if(files.length>room) document.getElementById('c-imgname').textContent='En fazla '+MAX_IMGS+' görsel — ilk '+room+' tanesi eklenecek.';
+  files.slice(0,room).forEach(f=>addComposeImage(f,f.name));
 });
 
 document.addEventListener('paste',e=>{
@@ -2074,16 +2096,21 @@ document.getElementById('c-post').addEventListener('click',()=>{
   if(!currentUser){showGate();return;}
   const sym=document.getElementById('c-sym').value.trim()||composeSym;
   const text=document.getElementById('c-text').value.trim();
-  if(!sym&&!text&&!composeImg){alert('Lütfen en az bir parite, analiz yazısı veya görsel ekle.');return;}
-  const resetCompose=()=>{document.getElementById('c-sym').value='';document.getElementById('c-text').value='';composeSym='';document.querySelectorAll('.spx').forEach(x=>x.classList.remove('sel'));clearComposeImg();feedFilter='all';document.querySelectorAll('.ff').forEach(x=>x.classList.toggle('active',x.dataset.f==='all'));};
+  if(!sym&&!text&&!composeImgs.length){alert('Lütfen en az bir parite, analiz yazısı veya görsel ekle.');return;}
+  const resetCompose=()=>{document.getElementById('c-sym').value='';document.getElementById('c-text').value='';composeSym='';document.querySelectorAll('.spx').forEach(x=>x.classList.remove('sel'));clearComposeImgs();feedFilter='all';document.querySelectorAll('.ff').forEach(x=>x.classList.toggle('active',x.dataset.f==='all'));};
   if(!DEMO){
-    (async()=>{ let img_url=null; if(composeImg)img_url=await uploadShot(composeImg);
+    (async()=>{
+      let img_url=null;
+      if(composeImgs.length){
+        const urls=[]; for(const d of composeImgs){const u=await uploadShot(d); if(u)urls.push(u);}
+        img_url = urls.length>1?JSON.stringify(urls):(urls[0]||null);
+      }
       try{const {error}=await sb.from('posts').insert({user_id:currentUser.id,username:currentUser.username,symbol:sym||'—',bias:composeBias,text,img_url});if(error)throw error;}
       catch(e){console.warn(e);alert('Paylaşım kaydedilemedi: '+(e.message||e));return;}
       resetCompose();await refreshFeed(); })();
     return;
   }
-  feed.push({id:'p'+Date.now(),uid:currentUser.id,name:currentUser.username,symbol:sym||'—',bias:composeBias,text,img:composeImg,ts:Date.now(),votes:{agree:0,disagree:0,neutral:0},comments:[]});
+  feed.push({id:'p'+Date.now(),uid:currentUser.id,name:currentUser.username,symbol:sym||'—',bias:composeBias,text,imgs:composeImgs.slice(),ts:Date.now(),votes:{agree:0,disagree:0,neutral:0},comments:[]});
   saveFeed(); resetCompose(); renderFeed();
 });
 document.querySelectorAll('.ff').forEach(b=>b.addEventListener('click',()=>{
@@ -2780,15 +2807,15 @@ function renderAdmin(){
     renderFeedback();
   }
   const box=document.getElementById('ad-mod-content'); if(!box)return;
-  const imgs=feed.filter(p=>p.img);
+  const imgs=feed.filter(p=>postImgs(p).length);
   let h='<h4>🖼 Görselli paylaşımlar</h4>';
-  h+=imgs.length?imgs.map(p=>`<div class="ad-item"><img src="${p.img}" class="ad-thumb"><div class="ad-it-meta"><b>${esc(p.name)}</b> · ${esc(p.symbol||'')}<br><span class="ad-muted">${esc((p.text||'').slice(0,90))}</span></div><div class="ad-acts"><button class="ad-del" data-img="${p.id}">Görseli sil</button>${isA?`<button class="ad-del danger" data-post="${p.id}">Paylaşımı sil</button>`:''}</div></div>`).join(''):'<div class="ad-muted">Görselli paylaşım yok.</div>';
+  h+=imgs.length?imgs.map(p=>{const ims=postImgs(p);return `<div class="ad-item"><img src="${ims[0]}" class="ad-thumb"><div class="ad-it-meta"><b>${esc(p.name)}</b> · ${esc(p.symbol||'')}${ims.length>1?` · 🖼×${ims.length}`:''}<br><span class="ad-muted">${esc((p.text||'').slice(0,90))}</span></div><div class="ad-acts"><button class="ad-del" data-img="${p.id}">${ims.length>1?'Görselleri sil':'Görseli sil'}</button>${isA?`<button class="ad-del danger" data-post="${p.id}">Paylaşımı sil</button>`:''}</div></div>`;}).join(''):'<div class="ad-muted">Görselli paylaşım yok.</div>';
   h+='<h4>💬 Yorumlar</h4>';
   let cm='';
   feed.forEach(p=>{(p.comments||[]).forEach((c,i)=>{cm+=`<div class="ad-item"><div class="ad-it-meta"><b>${esc(c.name)}</b> <span class="ad-muted">· ${esc(p.symbol||'')} paylaşımında</span><br>${esc(c.text)}</div><div class="ad-acts"><button class="ad-del" data-cm="${p.id}" data-ci="${i}" data-cid="${c.id||''}">Yorumu sil</button></div></div>`;});});
   h+=cm||'<div class="ad-muted">Yorum yok.</div>';
   box.innerHTML=h;
-  box.querySelectorAll('[data-img]').forEach(b=>b.addEventListener('click',async()=>{const id=b.dataset.img;if(!confirm('Bu paylaşımın görselini sil?'))return;if(!DEMO){try{await sb.from('posts').update({img_url:null}).eq('id',id);}catch(e){console.warn(e);}await sbLoadFeed();}else{const p=feed.find(x=>x.id===id);if(p){p.img=null;saveFeed();}}renderAdmin();}));
+  box.querySelectorAll('[data-img]').forEach(b=>b.addEventListener('click',async()=>{const id=b.dataset.img;if(!confirm('Bu paylaşımın görselini sil?'))return;if(!DEMO){try{await sb.from('posts').update({img_url:null}).eq('id',id);}catch(e){console.warn(e);}await sbLoadFeed();}else{const p=feed.find(x=>x.id===id);if(p){p.img=null;p.imgs=[];saveFeed();}}renderAdmin();}));
   box.querySelectorAll('[data-post]').forEach(b=>b.addEventListener('click',async()=>{const id=b.dataset.post;if(!confirm('Paylaşımı tamamen sil?'))return;if(!DEMO){try{await sb.from('posts').delete().eq('id',id);}catch(e){console.warn(e);}await sbLoadFeed();}else{feed=feed.filter(x=>x.id!==id);saveFeed();}renderAdmin();}));
   box.querySelectorAll('[data-cm]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Yorumu sil?'))return;const pid=b.dataset.cm,cid=b.dataset.cid,ci=+b.dataset.ci;if(!DEMO&&cid){try{await sb.from('comments').delete().eq('id',cid);}catch(e){console.warn(e);}await sbLoadFeed();}else{const p=feed.find(x=>x.id===pid);if(p&&p.comments)p.comments.splice(ci,1);saveFeed();}renderAdmin();}));
 }
@@ -2882,7 +2909,7 @@ async function sbLoadFeed(){
     const {data:comments}=await sb.from('comments').select('*').order('created_at',{ascending:true});
     const vb={}; (votes||[]).forEach(v=>{const o=vb[v.post_id]||(vb[v.post_id]={agree:0,disagree:0,neutral:0});if(o[v.choice]!=null)o[v.choice]++;});
     const cb={}; (comments||[]).forEach(c=>{(cb[c.post_id]||(cb[c.post_id]=[])).push({id:c.id,uid:c.user_id,name:c.username,text:c.text,ts:new Date(c.created_at).getTime()});});
-    feed=(posts||[]).map(p=>({id:p.id,uid:p.user_id,name:p.username,symbol:p.symbol,bias:p.bias,text:p.text,img:p.img_url,ts:new Date(p.created_at).getTime(),votes:vb[p.id]||{agree:0,disagree:0,neutral:0},comments:cb[p.id]||[]}));
+    feed=(posts||[]).map(p=>({id:p.id,uid:p.user_id,name:p.username,symbol:p.symbol,bias:p.bias,text:p.text,imgs:parseImgUrl(p.img_url),ts:new Date(p.created_at).getTime(),votes:vb[p.id]||{agree:0,disagree:0,neutral:0},comments:cb[p.id]||[]}));
     myVotes={}; if(currentUser)(votes||[]).forEach(v=>{if(v.user_id===currentUser.id)myVotes[v.post_id]=v.choice;});
     return true;
   }catch(e){console.warn('sbLoadFeed',e);return false;}

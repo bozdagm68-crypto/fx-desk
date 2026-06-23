@@ -14,7 +14,6 @@
 ## 🎯 UI / UX iyileştirmeleri — 2026-06-23 eklendi (sırayla, acele yok)
 - [x] **Daraltılabilir kenar panel** — Logoya/☰'e tıklayınca panel kapanır, grafik tam ekran; durum hatırlanır. ✅
 - [x] **4'lü grafikte RSI varsayılan kapalı** — RSI kapalı başlar; her grafiğin köşesindeki **RSI** düğmesiyle aç/kapat (çift tık iframe nedeniyle yakalanamadığı için köşe düğmesi yapıldı). ✅
-- [ ] **Paylaşımlarda çoklu görsel** — Topluluk paylaşımında tek görsel yerine kullanıcı **aynı anda 3 görsele kadar** ekleyebilsin (önizleme + paylaşımda galeri görünümü).
 - [ ] **Journal tablosu sadeleştirme** — Tablodan **Giriş, Çıkış, SL, RR, Strateji, Psikoloji** sütunlarını kaldır; yalnızca **Tarih · Parite · Yön · Kazanılan/Kaybedilen (P/L)** göster. *(Not: bu alanlar veride saklanmaya devam mı etsin yoksa tamamen mi kalksın — uygularken netleştirilecek.)*
 - [ ] **Journal'da pariteye göre filtre** — Tabloya parite filtresi ekle; bir parite seçilince (örn. **XAU**) o paritenin **tüm işlemleri** listelensin.
 
@@ -37,6 +36,8 @@
 ---
 
 ## ✅ Bitti
+- [x] **Paylaşımlarda çoklu görsel** — Paylaşıma **3 görsele kadar** eklenebilir (📎 çoklu seç veya Ctrl+V; her görsel ayrı kaldırılabilir önizleme). Akışta 1 görsel tam genişlik, 2-3 görsel galeri (grid) olarak; tıklayınca lightbox. NSFW kontrolü her görsele uygulanır. Demo modda `imgs[]` dizisinde; Supabase'de çoklu URL `img_url`'de JSON dizi olarak saklanır (eski tekli paylaşımlar geriye dönük uyumlu). Admin panelinde çoklu görsel rozeti + tek tıkla hepsini silme.
+- [x] Paylaşımlar: kullanıcı kendi gönderi/yorumunu **düzenleyebilir** (✏️ inline) ve kendi yorumunu **silebilir** (🗑); düzenleme sahibe, silme sahip+yöneticiye özel. *(Supabase'de `upd_post` + `upd_comment` RLS gerekli.)*
 - [x] Admin: kullanıcı listesi (e-posta, kayıt, son aktif, çevrimiçi durum) + arama + satır içi mod yap/al + banla.
 - [x] Beta geri bildirimlerini admin panelinde okunur hale getirme (panel açılınca yüklenir, sayaç + otomatik tazele).
 - [x] Kayıp İstatistik/Ayarlar/Beta sürümünü geri yükleme + klasörü git'e (GitHub/Render) düzgün bağlama.
