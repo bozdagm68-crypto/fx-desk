@@ -1,0 +1,7 @@
+# Yerel araç ayarları (depoya gönderilmez)
+.claude/
+
+# OS / editör dosyaları
+Thumbs.db
+desktop.ini
+.DS_Store
