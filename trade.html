@@ -405,7 +405,7 @@
   .jr-chartbox h3{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
   .jr-chartbox canvas{height:180px !important;max-height:180px}
   .jr-tablewrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:auto}
-  .jr-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
+  .jr-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:460px}
   .jr-table th{text-align:left;padding:10px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);background:var(--panel-2)}
   .jr-table td{padding:10px;border-bottom:1px solid var(--border)}
   .jr-table tr:hover td{background:var(--panel-2)}
@@ -1135,7 +1135,7 @@
       </div>
       <div class="jr-tablewrap" id="jr-tablewrap">
         <table class="jr-table">
-          <thead><tr><th>Tarih</th><th>Parite</th><th>Yön</th><th>Giriş</th><th>Çıkış</th><th>SL</th><th>RR</th><th>P&amp;L</th><th>Strateji</th><th>Psik.</th><th></th></tr></thead>
+          <thead><tr><th>Tarih</th><th>Parite</th><th>Yön</th><th>Kâr / Zarar</th><th></th></tr></thead>
           <tbody id="jr-tbody"></tbody>
         </table>
         <div class="jr-empty" id="jr-empty"></div>
@@ -2258,7 +2258,6 @@ function renderJrStats(){
 
 function renderJrTable(){
   const tb=document.getElementById('jr-tbody');
-  const emo=['','😰','🙁','😐','🙂','😎'];
   const sorted=[...jrTrades].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.ts-a.ts);
   tb.innerHTML='';
   const empty=document.getElementById('jr-empty');
@@ -2275,11 +2274,7 @@ function renderJrTable(){
       <td>${t.date||''}</td>
       <td><b>${esc(t.pair||'')}</b></td>
       <td><span class="jr-dir ${t.dir}">${t.dir==='short'?'Short':'Long'}</span></td>
-      <td>${t.entry||''}</td><td>${t.exit||''}</td><td>${t.sl||''}</td>
-      <td class="${c.rr>=0?'pos':'neg'}">${c.rr==null?'-':fmtR(c.rr)}</td>
       <td class="${pnlc}">${c.pnl==null?'-':fmtUSD(c.pnl)}</td>
-      <td>${esc(t.strategy||'')}</td>
-      <td>${emo[t.emotion]||''} ${t.plan==='yes'?'✅':(t.plan==='no'?'⚠️':'')}</td>
       <td><span class="jr-row-del" title="Sil">🗑</span></td>`;
     tr.querySelector('.jr-row-del').addEventListener('click',e=>{e.stopPropagation();if(confirm('İşlemi sil?')){jrTrades=jrTrades.filter(x=>x.id!==t.id);jrSaveData();renderJournal();}});
     if(t.img){tr.style.cursor='zoom-in';tr.addEventListener('click',()=>openLightbox(t.img));}
