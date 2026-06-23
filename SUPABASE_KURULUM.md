@@ -276,6 +276,42 @@ create policy "ins_vote" on votes for insert with check (
 
 ---
 
+## Geri bildirim (Beta sekmesi → Admin paneli)
+
+Beta sekmesindeki "Sorun bildir / özellik öner" kutusundan gelen mesajların **Supabase'de saklanması** ve admin panelindeki **📨 Geri Bildirimler** bölümünde okunabilmesi için `feedback` tablosunu ve kurallarını oluştur. SQL Editor → New query → Run:
+
+```sql
+create table if not exists feedback (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references auth.users(id) on delete set null,
+  username   text,
+  message    text not null,
+  created_at timestamptz default now()
+);
+
+alter table feedback enable row level security;
+
+-- Giriş yapan herkes kendi adına geri bildirim ekleyebilir
+create policy "ins_feedback" on feedback
+  for insert to authenticated with check (auth.uid() = user_id);
+
+-- Yalnızca yöneticiler okuyabilir (mesajlar gizli)
+create policy "admin_read_feedback" on feedback for select using (
+  exists (select 1 from profiles where profiles.id = auth.uid() and profiles.is_admin = true)
+);
+
+-- Yalnızca yöneticiler silebilir
+create policy "admin_del_feedback" on feedback for delete using (
+  exists (select 1 from profiles where profiles.id = auth.uid() and profiles.is_admin = true)
+);
+```
+
+Notlar:
+- Tablo kurulmadan Beta'dan "Gönder"e basınca **"Gönderilemedi"** hatası alınır; bu SQL'i çalıştırınca düzelir.
+- Mesajları **yalnızca admin** görür; admin panelini açınca otomatik yüklenir, başlıkta sayı görünür (örn. *📨 Geri Bildirimler (3)*), panel açıkken 30 sn'de bir tazelenir. Her mesajın yanında **Sil** düğmesi vardır.
+
+---
+
 ## İçerik denetimi (uygunsuz görsel engelleme)
 
 Site şu an **iki katmanlı** korumaya hazırlanıyor:

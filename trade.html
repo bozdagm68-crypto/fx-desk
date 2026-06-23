@@ -1192,7 +1192,7 @@
         <h3>🛡 Moderatörler</h3>
         <div class="ad-mods"><input id="ad-mod-email" placeholder="kullanıcı adı (örn. mustafa_fx)" autocomplete="off"><button id="ad-mod-add">Mod yap</button></div>
         <div id="ad-mod-list" class="ad-mod-list"></div>
-        <h3>📨 Geri Bildirimler</h3>
+        <h3 id="ad-fb-head">📨 Geri Bildirimler</h3>
         <div id="ad-feedback" class="ad-mod-content"></div>
       </div>
       <h3>🧹 İçerik Denetimi — Paylaşımlar</h3>
@@ -2664,6 +2664,7 @@ function renderAdmin(){
       renderAdminUsersSb();
     }
     renderModList();
+    renderFeedback();
   }
   const box=document.getElementById('ad-mod-content'); if(!box)return;
   const imgs=feed.filter(p=>p.img);
@@ -2696,7 +2697,7 @@ setInterval(pingPresence,45000);
 setInterval(()=>{ // admin paneli açıkken aktiflik durumunu tazele
   if(DEMO)return;
   const av=document.getElementById('view-admin'); if(!av||av.style.display==='none')return;
-  if(currentUser&&currentUser.isAdmin)renderAdminUsersSb();
+  if(currentUser&&currentUser.isAdmin){renderAdminUsersSb();renderFeedback();}
 },30000);
 
 let _adUserRows=[];
@@ -2897,6 +2898,7 @@ async function renderFeedback(){
   let list=[];
   if(!DEMO){ try{const {data}=await sb.from('feedback').select('*').order('created_at',{ascending:false}); list=(data||[]).map(x=>({id:x.id,username:x.username,message:x.message,ts:new Date(x.created_at).getTime()}));}catch(e){console.warn(e);} }
   else list=(JSON.parse(localStorage.getItem('fxdesk_feedback')||'[]')).sort((a,b)=>b.ts-a.ts);
+  const hd=document.getElementById('ad-fb-head'); if(hd)hd.textContent='📨 Geri Bildirimler'+(list.length?' ('+list.length+')':'');
   box.innerHTML=list.length?list.map(fb=>'<div class="ad-item"><div class="ad-it-meta"><b>'+esc(fb.username||'?')+'</b> <span class="ad-muted">· '+fmtDT(fb.ts)+'</span><br>'+esc(fb.message)+'</div><div class="ad-acts"><button class="ad-del" data-fb="'+fb.id+'">Sil</button></div></div>').join(''):'<div class="ad-muted">Henüz geri bildirim yok.</div>';
   box.querySelectorAll('[data-fb]').forEach(b=>b.addEventListener('click',async()=>{const id=b.dataset.fb;if(!confirm('Geri bildirimi sil?'))return;if(!DEMO){try{await sb.from('feedback').delete().eq('id',id);}catch(e){}}else{const a=JSON.parse(localStorage.getItem('fxdesk_feedback')||'[]').filter(x=>x.id!==id);localStorage.setItem('fxdesk_feedback',JSON.stringify(a));}renderFeedback();}));
 }
