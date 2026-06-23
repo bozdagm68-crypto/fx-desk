@@ -404,6 +404,10 @@
   .jr-chartbox{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px}
   .jr-chartbox h3{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
   .jr-chartbox canvas{height:180px !important;max-height:180px}
+  .jr-filterbar{display:flex;align-items:center;gap:9px;margin-bottom:10px;flex-wrap:wrap}
+  .jr-fb-lbl{color:var(--muted);font-size:12.5px;font-weight:600}
+  .jr-pair-sel{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:7px;font-size:12.5px;font-family:inherit;cursor:pointer;outline:none;transition:.12s}
+  .jr-pair-sel:hover,.jr-pair-sel:focus{border-color:var(--accent)}
   .jr-tablewrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:auto}
   .jr-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:460px}
   .jr-table th{text-align:left;padding:10px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);background:var(--panel-2)}
@@ -1132,6 +1136,10 @@
           <button id="jr-copy-card" class="jsc-copy">📋 Kopyala</button>
         </div>
         <div class="jsc-radar"><canvas id="jr-radar"></canvas></div>
+      </div>
+      <div class="jr-filterbar" id="jr-filterbar">
+        <span class="jr-fb-lbl">🔎 Parite:</span>
+        <select id="jr-pair-filter" class="jr-pair-sel"><option value="all">Tüm pariteler</option></select>
       </div>
       <div class="jr-tablewrap" id="jr-tablewrap">
         <table class="jr-table">
@@ -2125,6 +2133,7 @@ document.getElementById('lightbox').addEventListener('click',()=>document.getEle
 /* ================= JOURNAL (İşlem Günlüğü) ================= */
 let jrTrades=[];
 let jrPage=1;
+let jrPairFilter='all';       // journal tablosu parite filtresi
 let jrCharts={};
 let jrImg=null;
 let jDir='long', jEmotion=3, jPlan='yes';
@@ -2149,6 +2158,7 @@ const fmtR=v=>(v>=0?'+':'')+v.toFixed(2)+'R';
 function renderJournal(){
   ensureProfiles(); renderProfileCards();
   jrLoad(); jrPage=1;
+  renderPairFilter();
   renderMt5Summary(); renderJrStats(); renderScore(); renderJrTable(); renderJrCharts(); renderJrCalendar();
 }
 
@@ -2256,9 +2266,20 @@ function renderJrStats(){
   box.innerHTML=cards.map(c=>`<div class="jr-card"><div class="jc-l">${c.l}</div><div class="jc-v ${c.c}">${c.v}</div></div>`).join('');
 }
 
+/* parite filtresi: mevcut paritelerden açılır liste (adet rozetiyle) */
+function renderPairFilter(){
+  const sel=document.getElementById('jr-pair-filter'); if(!sel)return;
+  const pairs=[...new Set(jrTrades.map(t=>(t.pair||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
+  if(jrPairFilter!=='all' && !pairs.includes(jrPairFilter)) jrPairFilter='all';
+  const cnt=p=>jrTrades.filter(t=>(t.pair||'').trim()===p).length;
+  sel.innerHTML='<option value="all">Tüm pariteler ('+jrTrades.length+')</option>'+
+    pairs.map(p=>`<option value="${esc(p)}">${esc(p)} (${cnt(p)})</option>`).join('');
+  sel.value=jrPairFilter;
+}
 function renderJrTable(){
   const tb=document.getElementById('jr-tbody');
-  const sorted=[...jrTrades].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.ts-a.ts);
+  const base=jrPairFilter==='all'?jrTrades:jrTrades.filter(t=>(t.pair||'').trim()===jrPairFilter);
+  const sorted=[...base].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.ts-a.ts);
   tb.innerHTML='';
   const empty=document.getElementById('jr-empty');
   empty.style.display=sorted.length?'none':'block';
@@ -2579,6 +2600,7 @@ function setJrView(v){
   document.getElementById('jr-view-table').classList.toggle('active',v==='table');
   document.getElementById('jr-view-cal').classList.toggle('active',v==='cal');
   document.getElementById('jr-tablewrap').style.display=v==='table'?'':'none';
+  const fb=document.getElementById('jr-filterbar'); if(fb)fb.style.display=v==='table'?'':'none';
   document.getElementById('jr-calwrap').style.display=v==='cal'?'':'none';
   if(v==='cal')renderJrCalendar();
 }
@@ -2592,6 +2614,7 @@ document.getElementById('pr-import').addEventListener('click',()=>document.getEl
 document.getElementById('pr-import-file').addEventListener('change',e=>{const f=e.target.files[0];if(f)doImport(f);});
 document.getElementById('jr-view-table').addEventListener('click',()=>setJrView('table'));
 document.getElementById('jr-view-cal').addEventListener('click',()=>setJrView('cal'));
+document.getElementById('jr-pair-filter').addEventListener('change',e=>{jrPairFilter=e.target.value;jrPage=1;renderJrTable();});
 
 /* ===== MT5 PDF / RAPOR İÇE AKTARMA ===== */
 if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}

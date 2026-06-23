@@ -14,7 +14,6 @@
 ## 🎯 UI / UX iyileştirmeleri — 2026-06-23 eklendi (sırayla, acele yok)
 - [x] **Daraltılabilir kenar panel** — Logoya/☰'e tıklayınca panel kapanır, grafik tam ekran; durum hatırlanır. ✅
 - [x] **4'lü grafikte RSI varsayılan kapalı** — RSI kapalı başlar; her grafiğin köşesindeki **RSI** düğmesiyle aç/kapat (çift tık iframe nedeniyle yakalanamadığı için köşe düğmesi yapıldı). ✅
-- [ ] **Journal'da pariteye göre filtre** — Tabloya parite filtresi ekle; bir parite seçilince (örn. **XAU**) o paritenin **tüm işlemleri** listelensin.
 
 ## 🧩 Kod tarafı (ben yapacağım)
 - [ ] **Analiz sekmesi** — admin günlük analiz ekler, YouTube videosunu başlangıç–bitiş saatiyle kırpıp gömer (sadece ilgili kısım oynar), grup izler. *(konuşuldu, onayını bekliyor)*
@@ -35,6 +34,7 @@
 ---
 
 ## ✅ Bitti
+- [x] **Journal'da pariteye göre filtre** — Tablo üstüne **açılır parite filtresi** eklendi (her parite yanında işlem adedi rozeti; "Tüm pariteler" varsayılan). Seçilince o paritenin tüm işlemleri tabloda listelenir; filtre yalnızca tablo görünümünde görünür (takvimde gizli) ve sayfalama/sayaçla uyumlu. Paritelerin listesi mevcut işlemlerden otomatik üretilir; seçili parite silinince filtre "Tüm pariteler"e döner.
 - [x] **Journal tablosu sadeleştirme** — Tablo artık yalnızca **Tarih · Parite · Yön · Kâr/Zarar (P/L)** + sil sütunu. Giriş/Çıkış/SL/RR/Strateji/Psikoloji **veride korunuyor** (İstatistik, grafikler, RR ve otomatik P/L hesabı bozulmadan çalışır) — sadece tablo görünümü sadeleşti. Tablo min-genişliği 760→460px (mobilde daha az yatay kaydırma).
 - [x] **Paylaşımlarda çoklu görsel** — Paylaşıma **3 görsele kadar** eklenebilir (📎 çoklu seç veya Ctrl+V; her görsel ayrı kaldırılabilir önizleme). Akışta 1 görsel tam genişlik, 2-3 görsel galeri (grid) olarak; tıklayınca lightbox. NSFW kontrolü her görsele uygulanır. Demo modda `imgs[]` dizisinde; Supabase'de çoklu URL `img_url`'de JSON dizi olarak saklanır (eski tekli paylaşımlar geriye dönük uyumlu). Admin panelinde çoklu görsel rozeti + tek tıkla hepsini silme.
 - [x] Paylaşımlar: kullanıcı kendi gönderi/yorumunu **düzenleyebilir** (✏️ inline) ve kendi yorumunu **silebilir** (🗑); düzenleme sahibe, silme sahip+yöneticiye özel. *(Supabase'de `upd_post` + `upd_comment` RLS gerekli.)*
