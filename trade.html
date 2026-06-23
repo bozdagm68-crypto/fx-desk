@@ -96,6 +96,15 @@
   .left{flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--border)}
   .right{width:380px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;background:var(--panel)}
 
+  /* ---------- Daraltılabilir kenar panel ---------- */
+  .sidebar,.topbar,main{transition:transform .22s ease, left .22s ease}
+  .brand{cursor:pointer}
+  .sidebar-toggle{background:var(--panel-2);border:1px solid var(--border);color:var(--text);width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;transition:.15s}
+  .sidebar-toggle:hover{border-color:var(--accent);color:var(--accent)}
+  body.sidebar-collapsed .sidebar{transform:translateX(-100%)}
+  body.sidebar-collapsed .topbar{left:0}
+  body.sidebar-collapsed main{left:0}
+
   /* ---------- Sembol çubuğu ---------- */
   .symbols{
     display:flex;align-items:center;gap:6px;padding:8px 12px;
@@ -903,6 +912,10 @@
     .sidebar-foot{display:none}
     .topbar{left:0;top:56px}
     main{left:0;top:108px}
+    .sidebar-toggle{display:none}
+    body.sidebar-collapsed .sidebar{transform:none}
+    body.sidebar-collapsed .topbar{left:0;top:56px}
+    body.sidebar-collapsed main{left:0;top:108px}
   }
 </style>
 </head>
@@ -910,7 +923,7 @@
 
 <header>
   <aside class="sidebar">
-    <div class="brand"><span class="logo-box">FX</span><span class="brand-txt">FX&nbsp;DESK</span></div>
+    <div class="brand" id="brand-toggle" title="Paneli daralt"><span class="logo-box">FX</span><span class="brand-txt">FX&nbsp;DESK</span></div>
     <nav id="nav">
       <button class="active" data-tab="trade"><span class="nv-ic">📊</span><span>Trade</span></button>
       <button data-tab="feed"><span class="nv-ic">📣</span><span>Paylaşımlar</span></button>
@@ -929,6 +942,7 @@
     </div>
   </aside>
   <div class="topbar">
+    <button id="sidebar-toggle" class="sidebar-toggle" title="Paneli aç / kapat" aria-label="Paneli aç / kapat">☰</button>
     <div class="clock">
       <span>İstanbul</span><b id="clock">--:--:--</b>
     </div>
@@ -2596,6 +2610,21 @@ document.getElementById('jr-import-head-file').addEventListener('change',e=>{con
 
 function applyTheme(t){document.body.classList.toggle('light',t==='light');const b=document.getElementById('theme-btn');if(b)b.textContent=t==='light'?'☀️':'🌙';localStorage.setItem('fxdesk_theme',t);}
 (function(){const tb=document.getElementById('theme-btn');if(tb)tb.addEventListener('click',()=>applyTheme(document.body.classList.contains('light')?'dark':'light'));applyTheme(localStorage.getItem('fxdesk_theme')||'dark');applyAccent(localStorage.getItem('fxdesk_accent')||'#00f2ff');})();
+
+/* Daraltılabilir kenar panel — brand'e veya ☰'e tıkla; durum hatırlanır, grafik yeniden boyutlanır */
+(function(){
+  const KEY='fxdesk_sidebar_collapsed';
+  function apply(c){
+    document.body.classList.toggle('sidebar-collapsed',c);
+    const bt=document.getElementById('brand-toggle'); if(bt)bt.title=c?'Paneli aç':'Paneli daralt';
+    setTimeout(()=>{try{window.dispatchEvent(new Event('resize'));}catch(e){}},260);
+  }
+  function toggle(){const c=!document.body.classList.contains('sidebar-collapsed');apply(c);try{localStorage.setItem(KEY,c?'1':'0');}catch(e){}}
+  const brand=document.getElementById('brand-toggle'); if(brand)brand.addEventListener('click',toggle);
+  const st=document.getElementById('sidebar-toggle'); if(st)st.addEventListener('click',toggle);
+  let init=false; try{init=localStorage.getItem(KEY)==='1';}catch(e){}
+  if(init)apply(true);
+})();
 
 /* ================= ADMIN / MODERATÖR ================= */
 let _loginCounted=false;
