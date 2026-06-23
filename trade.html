@@ -755,6 +755,9 @@
   .chart-modes button.active{background:var(--accent);border-color:var(--accent);color:#fff}
   #chart-grid{width:100%;height:100%;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;background:var(--border)}
   .tvg-cell{position:relative;min-height:0;min-width:0;background:var(--bg)}
+  .tvg-rsi{position:absolute;top:7px;right:7px;z-index:5;background:rgba(10,12,18,.72);border:1px solid var(--border);color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.6px;padding:3px 8px;border-radius:7px;cursor:pointer;font-family:inherit;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:.13s}
+  .tvg-rsi:hover{border-color:var(--accent);color:var(--text)}
+  .tvg-rsi.on{background:var(--accent);border-color:var(--accent);color:#021014;box-shadow:0 0 10px rgba(0,242,255,.35)}
 
   .rh-chev{margin-left:8px;cursor:pointer;color:var(--muted);font-size:12px;transition:.15s;user-select:none;flex-shrink:0}
   .rh-chev:hover{color:var(--text)}
@@ -1481,17 +1484,29 @@ loadChart(activeSym);
 /* ---- 4'lü grafik görünümü ---- */
 let chartMode='single';
 let GRID_TFS=JSON.parse(localStorage.getItem('fxdesk_grid_tfs')||'null')||['1','5','45','240'];
-function buildGrid(symbol){
-  const g=document.getElementById('chart-grid'); if(!g)return; g.innerHTML='';
+let GRID_RSI=[false,false,false,false]; // 4'lü grafikte her hücrenin RSI durumu (varsayılan kapalı)
+let lastGridSymbol='FX:EURUSD';
+function gridWidget(i,symbol){
+  const inner=document.getElementById('tvg'+i); if(!inner)return;
+  inner.innerHTML='';
   const GBG=localStorage.getItem('fxdesk_grid_bg')||'#161a25';
   const GUP=localStorage.getItem('fxdesk_grid_up')||'#ffffff';
   const GDN=localStorage.getItem('fxdesk_grid_down')||'#787b86';
   const GWK=localStorage.getItem('fxdesk_grid_wick')||'#9598a1';
+  new TradingView.widget({container_id:'tvg'+i,autosize:true,symbol:symbol||'FX:EURUSD',interval:GRID_TFS[i],timezone:"Europe/Istanbul",theme:"dark",style:"1",locale:"tr",hide_side_toolbar:false,allow_symbol_change:true,withdateranges:false,details:false,hide_volume:true,studies:GRID_RSI[i]?["RSI@tv-basicstudies"]:[],studies_overrides:{"volume.volume.display":false,"relative strength index.upper band.value":70,"relative strength index.middle band.value":50,"relative strength index.lower band.value":30,"relative strength index.upper band.color":"#787b86","relative strength index.lower band.color":"#787b86","relative strength index.plot.color":"#c8cad0","relative strength index.plot.linewidth":2,"relative strength index.smoothed ma.color":"#9598a1"},overrides:{"paneProperties.background":GBG,"paneProperties.backgroundType":"solid","paneProperties.vertGridProperties.color":"rgba(150,150,150,0.10)","paneProperties.horzGridProperties.color":"rgba(150,150,150,0.10)","mainSeriesProperties.candleStyle.upColor":GUP,"mainSeriesProperties.candleStyle.downColor":GDN,"mainSeriesProperties.candleStyle.borderUpColor":GUP,"mainSeriesProperties.candleStyle.borderDownColor":GDN,"mainSeriesProperties.candleStyle.wickUpColor":GWK,"mainSeriesProperties.candleStyle.wickDownColor":GWK,"mainSeriesProperties.candleStyle.drawBorder":true}});
+}
+function buildGrid(symbol){
+  lastGridSymbol=symbol||'FX:EURUSD';
+  const g=document.getElementById('chart-grid'); if(!g)return; g.innerHTML='';
   GRID_TFS.forEach((tf,i)=>{
     const cell=document.createElement('div'); cell.className='tvg-cell';
     const inner=document.createElement('div'); inner.id='tvg'+i; inner.style.width='100%'; inner.style.height='100%';
-    cell.appendChild(inner); g.appendChild(cell);
-    new TradingView.widget({container_id:'tvg'+i,autosize:true,symbol:symbol||'FX:EURUSD',interval:tf,timezone:"Europe/Istanbul",theme:"dark",style:"1",locale:"tr",hide_side_toolbar:false,allow_symbol_change:true,withdateranges:false,details:false,hide_volume:true,studies:["RSI@tv-basicstudies"],studies_overrides:{"volume.volume.display":false,"relative strength index.upper band.value":70,"relative strength index.middle band.value":50,"relative strength index.lower band.value":30,"relative strength index.upper band.color":"#787b86","relative strength index.lower band.color":"#787b86","relative strength index.plot.color":"#c8cad0","relative strength index.plot.linewidth":2,"relative strength index.smoothed ma.color":"#9598a1"},overrides:{"paneProperties.background":GBG,"paneProperties.backgroundType":"solid","paneProperties.vertGridProperties.color":"rgba(150,150,150,0.10)","paneProperties.horzGridProperties.color":"rgba(150,150,150,0.10)","mainSeriesProperties.candleStyle.upColor":GUP,"mainSeriesProperties.candleStyle.downColor":GDN,"mainSeriesProperties.candleStyle.borderUpColor":GUP,"mainSeriesProperties.candleStyle.borderDownColor":GDN,"mainSeriesProperties.candleStyle.wickUpColor":GWK,"mainSeriesProperties.candleStyle.wickDownColor":GWK,"mainSeriesProperties.candleStyle.drawBorder":true}});
+    cell.appendChild(inner);
+    const btn=document.createElement('button'); btn.type='button'; btn.className='tvg-rsi'+(GRID_RSI[i]?' on':''); btn.textContent='RSI'; btn.title='RSI aç / kapat (bu grafik)';
+    btn.addEventListener('click',()=>{GRID_RSI[i]=!GRID_RSI[i]; btn.classList.toggle('on',GRID_RSI[i]); gridWidget(i,lastGridSymbol);});
+    cell.appendChild(btn);
+    g.appendChild(cell);
+    gridWidget(i,lastGridSymbol);
   });
 }
 function setChartMode(m){
