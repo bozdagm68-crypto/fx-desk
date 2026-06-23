@@ -12,8 +12,8 @@
 ---
 
 ## 🎯 UI / UX iyileştirmeleri — 2026-06-23 eklendi (sırayla, acele yok)
-- [ ] **Daraltılabilir kenar panel** — Sol üstteki "FX Desk" + logo alanını bir panel başlığına çevir; tıklayınca kenar paneli kapanıp açılsın (toggle). Panel kapalıyken grafik alanı **tam ekran** kullanılsın.
-- [ ] **4'lü grafikte RSI varsayılan kapalı** — 4'lü grafik açıldığında RSI otomatik gelmesin; ilgili grafiğe **çift tıklayınca** RSI açılıp kapansın.
+- [x] **Daraltılabilir kenar panel** — Logoya/☰'e tıklayınca panel kapanır, grafik tam ekran; durum hatırlanır. ✅
+- [x] **4'lü grafikte RSI varsayılan kapalı** — RSI kapalı başlar; her grafiğin köşesindeki **RSI** düğmesiyle aç/kapat (çift tık iframe nedeniyle yakalanamadığı için köşe düğmesi yapıldı). ✅
 - [ ] **Paylaşımlarda çoklu görsel** — Topluluk paylaşımında tek görsel yerine kullanıcı **aynı anda 3 görsele kadar** ekleyebilsin (önizleme + paylaşımda galeri görünümü).
 - [ ] **Journal tablosu sadeleştirme** — Tablodan **Giriş, Çıkış, SL, RR, Strateji, Psikoloji** sütunlarını kaldır; yalnızca **Tarih · Parite · Yön · Kazanılan/Kaybedilen (P/L)** göster. *(Not: bu alanlar veride saklanmaya devam mı etsin yoksa tamamen mi kalksın — uygularken netleştirilecek.)*
 - [ ] **Journal'da pariteye göre filtre** — Tabloya parite filtresi ekle; bir parite seçilince (örn. **XAU**) o paritenin **tüm işlemleri** listelensin.

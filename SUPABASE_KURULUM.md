@@ -312,6 +312,24 @@ Notlar:
 
 ---
 
+## Kendi içeriğini düzenleme (paylaşım & yorum)
+
+Paylaşımlar sekmesinde kullanıcı **kendi paylaşım ve yorumunu düzenleyebilir** (✏️) ve **silebilir** (🗑). Silme kuralları kurulumda zaten var; **düzenleme** için iki UPDATE kuralı eklenmeli. SQL Editor → Run:
+
+```sql
+create policy "upd_post" on posts
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "upd_comment" on comments
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
+
+Notlar:
+- **Düzenle (✏️)** yalnızca içerik **sahibine** görünür. **Sil (🗑)** sahip + **yöneticiye** görünür.
+- Bu SQL çalıştırılmazsa düzenleme arayüzde görünür ama **kaydolmaz** (RLS engeller). Eklenince düzgün çalışır.
+
+---
+
 ## İçerik denetimi (uygunsuz görsel engelleme)
 
 Site şu an **iki katmanlı** korumaya hazırlanıyor:

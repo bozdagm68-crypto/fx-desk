@@ -311,6 +311,20 @@
   .report-btn:hover{color:var(--red)}
   .del-btn{color:var(--red);font-size:12px;cursor:pointer;font-weight:600}
   .del-btn:hover{filter:brightness(1.25);text-decoration:underline}
+  .edit-btn{color:var(--accent-2);font-size:12px;cursor:pointer;font-weight:600}
+  .edit-btn:hover{text-decoration:underline;filter:brightness(1.15)}
+  .cm-acts{margin-left:8px;display:inline-flex;gap:9px;vertical-align:middle}
+  .cm-acts b{cursor:pointer;font-size:12px;opacity:.55;font-weight:400;transition:.12s}
+  .cm-acts b:hover{opacity:1;transform:scale(1.12)}
+  .inline-edit{margin-top:7px}
+  .inline-edit textarea{width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px;line-height:1.45;resize:vertical;min-height:52px}
+  .inline-edit textarea:focus{outline:none;border-color:var(--accent)}
+  .ie-btns{display:flex;gap:8px;margin-top:7px}
+  .ie-btns button{font-size:12px;padding:5px 13px;border-radius:7px;border:1px solid var(--border);cursor:pointer;font-weight:700;font-family:inherit;transition:.12s}
+  .ie-btns .ie-save{background:var(--accent);border-color:var(--accent);color:#021014}
+  .ie-btns .ie-save:hover{filter:brightness(1.08)}
+  .ie-btns .ie-cancel{background:var(--panel-2);color:var(--muted)}
+  .ie-btns .ie-cancel:hover{border-color:var(--muted);color:var(--text)}
   .admin-tag{font-size:9px;background:var(--gold);color:#000;padding:2px 6px;border-radius:8px;font-weight:800;letter-spacing:.3px}
   .comments{margin-top:12px;border-top:1px solid var(--border);padding-top:12px;display:none}
   .comments.open{display:block}
@@ -1795,6 +1809,57 @@ async function deletePost(id){
   renderFeed();
 }
 
+/* ---- Kendi içeriğini düzenle (paylaşım & yorum) ---- */
+function openInlineEditor(textEl,onSave){
+  if(!textEl)return;
+  const nx=textEl.nextElementSibling;
+  if(nx&&nx.classList&&nx.classList.contains('inline-edit'))return; // zaten düzenleniyor
+  const box=document.createElement('div'); box.className='inline-edit';
+  box.innerHTML='<textarea></textarea><div class="ie-btns"><button class="ie-save">Kaydet</button><button class="ie-cancel">İptal</button></div>';
+  const ta=box.querySelector('textarea'); ta.value=textEl.textContent;
+  textEl.style.display='none';
+  textEl.parentNode.insertBefore(box,textEl.nextSibling);
+  ta.focus(); try{ta.setSelectionRange(ta.value.length,ta.value.length);}catch(e){}
+  box.querySelector('.ie-cancel').addEventListener('click',()=>{box.remove();textEl.style.display='';});
+  box.querySelector('.ie-save').addEventListener('click',()=>onSave(ta.value));
+}
+function beginPostEdit(card,p){
+  let textEl=card.querySelector('.post-text');
+  if(!textEl){textEl=document.createElement('div');textEl.className='post-text';const top=card.querySelector('.post-top');top.insertAdjacentElement('afterend',textEl);}
+  openInlineEditor(textEl,v=>updatePost(p.id,v));
+}
+async function updatePost(id,newText){
+  newText=(newText||'').trim();
+  const p=feed.find(x=>x.id===id); if(!p||!currentUser)return;
+  if(!(p.uid&&p.uid===currentUser.id)){alert('Bu paylaşımı düzenleme yetkin yok.');return;}
+  if(!newText&&!p.img){alert('Metin boş olamaz.');return;}
+  p.text=newText;
+  if(!DEMO){try{const {error}=await sb.from('posts').update({text:newText}).eq('id',id);if(error)throw error;}catch(e){alert('Kaydedilemedi: '+(e.message||e));}}
+  else saveFeed();
+  renderFeed();
+}
+async function updateComment(postId,ci,newText){
+  newText=(newText||'').trim();
+  const p=feed.find(x=>x.id===postId); if(!p||!p.comments[ci]||!currentUser)return;
+  const c=p.comments[ci];
+  if(!(c.uid&&c.uid===currentUser.id)){alert('Bu yorumu düzenleme yetkin yok.');return;}
+  if(!newText){alert('Yorum boş olamaz.');return;}
+  c.text=newText;
+  if(!DEMO){try{const {error}=await sb.from('comments').update({text:newText}).eq('id',c.id);if(error)throw error;}catch(e){alert('Kaydedilemedi: '+(e.message||e));}}
+  else saveFeed();
+  openComments.add(postId); renderFeed();
+}
+async function deleteComment(postId,ci){
+  const p=feed.find(x=>x.id===postId); if(!p||!p.comments[ci]||!currentUser)return;
+  const c=p.comments[ci];
+  if(!(currentUser.isAdmin||(c.uid&&c.uid===currentUser.id))){alert('Bu yorumu silme yetkin yok.');return;}
+  if(!confirm('Yorumu sil?'))return;
+  if(!DEMO){try{await sb.from('comments').delete().eq('id',c.id);}catch(e){console.warn(e);}}
+  p.comments.splice(ci,1);
+  if(DEMO)saveFeed();
+  openComments.add(postId); renderFeed();
+}
+
 function loadFeed(){try{const f=JSON.parse(localStorage.getItem(FEED_KEY));if(Array.isArray(f))return f;}catch(e){}return SEED_FEED.slice();}
 function saveFeed(){try{localStorage.setItem(FEED_KEY,JSON.stringify(feed));}catch(e){alert('Depolama dolu olabilir — görselli eski paylaşımları silmen gerekebilir.');}}
 function loadVotes(){try{return JSON.parse(localStorage.getItem(VOTE_KEY))||{};}catch(e){return {};}}
@@ -1840,6 +1905,7 @@ function renderFeed(){
     const pct=v=>total?Math.round(v/total*100):0;
     const mine=myVotes[p.id];
     const canDel=currentUser&&(currentUser.isAdmin||(p.uid&&p.uid===currentUser.id));
+    const canEdit=currentUser&&p.uid&&p.uid===currentUser.id;
     const card=document.createElement('div');card.className='post';
     card.innerHTML=`
       <div class="post-top">
@@ -1863,10 +1929,11 @@ function renderFeed(){
       <div class="post-actions">
         <span class="cm-toggle">💬 ${p.comments.length} yorum${p.comments.length?' · göster/gizle':''}</span>
         <span class="report-btn" title="Uygunsuz içeriği bildir">🚩 Bildir</span>
+        ${canEdit?`<span class="edit-btn" title="Paylaşımını düzenle">✏️ Düzenle</span>`:''}
         ${canDel?`<span class="del-btn" title="${currentUser.isAdmin?'Yönetici: paylaşımı sil':'Paylaşımını sil'}">🗑 Sil</span>`:''}
       </div>
       <div class="comments ${openComments.has(p.id)?'open':''}">
-        ${p.comments.map(c=>`<div class="comment"><div class="avatar">${initial(c.name)}</div><div class="cm-body"><div class="cmname">${esc(c.name)} <span style="color:var(--muted);font-weight:400;font-size:11px">· ${timeAgo(c.ts)}</span></div><div class="cmtext">${esc(c.text)}</div></div></div>`).join('')}
+        ${p.comments.map((c,ci)=>{const ownC=currentUser&&c.uid&&c.uid===currentUser.id;const canDelC=currentUser&&(ownC||currentUser.isAdmin);return `<div class="comment" data-ci="${ci}"><div class="avatar">${initial(c.name)}</div><div class="cm-body"><div class="cmname">${esc(c.name)} <span style="color:var(--muted);font-weight:400;font-size:11px">· ${timeAgo(c.ts)}</span>${(ownC||canDelC)?`<span class="cm-acts">${ownC?'<b class="cm-edit" title="Düzenle">✏️</b>':''}${canDelC?'<b class="cm-del" title="Sil">🗑</b>':''}</span>`:''}</div><div class="cmtext">${esc(c.text)}</div></div></div>`;}).join('')}
         <div class="cm-add"><input placeholder="Yorum yaz..." /><button>Gönder</button></div>
       </div>`;
     card.querySelectorAll('.vote').forEach(btn=>btn.addEventListener('click',()=>vote(p.id,btn.dataset.v)));
@@ -1879,6 +1946,8 @@ function renderFeed(){
     cin.addEventListener('keydown',e=>{if(e.key==='Enter')doC();});
     card.querySelector('.report-btn').addEventListener('click',()=>reportPost(p.id));
     const db=card.querySelector('.del-btn'); if(db)db.addEventListener('click',()=>deletePost(p.id));
+    const eb=card.querySelector('.edit-btn'); if(eb)eb.addEventListener('click',()=>beginPostEdit(card,p));
+    card.querySelectorAll('.comment').forEach(el=>{const ci=+el.dataset.ci;const ce=el.querySelector('.cm-edit');if(ce)ce.addEventListener('click',()=>openInlineEditor(el.querySelector('.cmtext'),v=>updateComment(p.id,ci,v)));const cd=el.querySelector('.cm-del');if(cd)cd.addEventListener('click',()=>deleteComment(p.id,ci));});
     list.appendChild(card);
   });
 }
@@ -1906,7 +1975,7 @@ async function addComment(id,text){
     openComments.add(id);await refreshFeed();return;
   }
   const p=feed.find(x=>x.id===id);if(!p)return;
-  p.comments.push({name:(currentUser&&currentUser.username)||'Sen',text,ts:Date.now()});
+  p.comments.push({uid:(currentUser&&currentUser.id),name:(currentUser&&currentUser.username)||'Sen',text,ts:Date.now()});
   openComments.add(id);saveFeed();renderFeed();
 }
 
@@ -2812,7 +2881,7 @@ async function sbLoadFeed(){
     const {data:votes}=await sb.from('votes').select('*');
     const {data:comments}=await sb.from('comments').select('*').order('created_at',{ascending:true});
     const vb={}; (votes||[]).forEach(v=>{const o=vb[v.post_id]||(vb[v.post_id]={agree:0,disagree:0,neutral:0});if(o[v.choice]!=null)o[v.choice]++;});
-    const cb={}; (comments||[]).forEach(c=>{(cb[c.post_id]||(cb[c.post_id]=[])).push({id:c.id,name:c.username,text:c.text,ts:new Date(c.created_at).getTime()});});
+    const cb={}; (comments||[]).forEach(c=>{(cb[c.post_id]||(cb[c.post_id]=[])).push({id:c.id,uid:c.user_id,name:c.username,text:c.text,ts:new Date(c.created_at).getTime()});});
     feed=(posts||[]).map(p=>({id:p.id,uid:p.user_id,name:p.username,symbol:p.symbol,bias:p.bias,text:p.text,img:p.img_url,ts:new Date(p.created_at).getTime(),votes:vb[p.id]||{agree:0,disagree:0,neutral:0},comments:cb[p.id]||[]}));
     myVotes={}; if(currentUser)(votes||[]).forEach(v=>{if(v.user_id===currentUser.id)myVotes[v.post_id]=v.choice;});
     return true;
