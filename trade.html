@@ -1130,13 +1130,14 @@
         </div>
         <div class="sym-pick" id="sym-pick">
           <span class="sp-lbl">Parite:</span>
-          <button class="spx" data-s="BTC">BTC</button>
-          <button class="spx" data-s="ETH">ETH</button>
-          <button class="spx" data-s="USDT.D">USDT.D</button>
+          <button class="spx" data-s="DXY">DXY</button>
           <button class="spx" data-s="EUR">EUR</button>
           <button class="spx" data-s="GBP">GBP</button>
           <button class="spx" data-s="XAU">XAU</button>
-          <button class="spx" data-s="DXY">DXY</button>
+          <button class="spx" data-s="BTC">BTC</button>
+          <button class="spx" data-s="ETH">ETH</button>
+          <button class="spx" data-s="USDT.D">USDT.D</button>
+          <button class="spx" data-s="Altcoin">Altcoin</button>
           <input id="c-sym" class="sp-other" placeholder="diğer..." autocomplete="off" />
         </div>
         <textarea id="c-text" class="c-area" placeholder="Analizini / bias'ını yaz... (örn. EUR/USD 1.0820 desteğinden 1.0910'a kadar yükseliş bekliyorum)"></textarea>
@@ -1906,7 +1907,7 @@ const FEED_TABS=[
   {k:'BTC',    t:s=>s.includes('BTC')||s.includes('BITCOIN')},
   {k:'ETH',    t:s=>s.includes('ETH')},
   {k:'USDT.D', t:s=>s.includes('USDT.D')||s.includes('USDTD')},
-  {k:'Altcoin',t:s=>ALT_TOKENS.some(a=>s===a||s.startsWith(a))}
+  {k:'Altcoin',t:s=>s.includes('ALTCOIN')||s.includes('ALTSEASON')||ALT_TOKENS.some(a=>s===a||s.startsWith(a))}
 ];
 function postHasSym(p,key){ const k=feedSymKey(p.symbol); if(!k)return false; const tab=FEED_TABS.find(x=>x.k===key); return tab?tab.t(k):false; }
 function renderSymFilter(){
