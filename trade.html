@@ -530,6 +530,18 @@
   .jr-mt5-clear{margin-left:auto;cursor:pointer;color:var(--muted);font-size:13px}
   .jr-mt5-clear:hover{color:var(--red)}
 
+  .jr-help{margin-bottom:18px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .jr-help>summary{cursor:pointer;list-style:none;padding:11px 14px;font-size:13px;font-weight:700;color:var(--accent);user-select:none;display:flex;align-items:center;gap:8px}
+  .jr-help>summary::-webkit-details-marker{display:none}
+  .jr-help>summary::after{content:'▾';margin-left:auto;color:var(--muted);transition:transform .2s}
+  .jr-help[open]>summary::after{transform:rotate(180deg)}
+  .jr-help-body{padding:2px 16px 16px;font-size:13px;color:var(--text);line-height:1.6}
+  .jr-help-body h4{margin:13px 0 3px;font-size:13px;color:var(--gold)}
+  .jr-help-body p{margin:6px 0}
+  .jr-help-body ol,.jr-help-body ul{margin:3px 0 3px 18px;padding:0}
+  .jr-help-body li{margin:2px 0}
+  .jr-help-note{margin-top:12px!important;font-size:12px;color:var(--muted)}
+
   .jr-stats{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
   .jr-upload-head{background:var(--green);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
   .jr-upload-head:hover{filter:brightness(1.1)}
@@ -1124,6 +1136,45 @@
         <input type="file" id="jr-import-head-file" accept=".html,.htm,.pdf,.csv" hidden>
         <button class="jr-addbtn" id="jr-add-btn">+ Yeni işlem</button>
       </div>
+
+      <!-- ⓘ RAPOR YÜKLEME BİLGİLENDİRMESİ — metni aşağıdan dilediğin gibi düzenle -->
+      <details class="jr-help" id="jr-help">
+        <summary>ⓘ Rapor / işlem geçmişi nasıl yüklenir?</summary>
+        <div class="jr-help-body">
+          <p>İşlemlerini elle girmek yerine broker'ından aldığın raporu yükleyerek otomatik aktarabilirsin: <b>profil seç (yoksa “+ Yeni profil” aç) → 📥 Rapor Yükle → dosyanı seç.</b> Desteklenen formatlar: HTML, CSV, PDF.</p>
+
+          <h4>🟦 MT5 (MetaTrader) kullananlar</h4>
+          <ol>
+            <li>MetaTrader 5'i aç.</li>
+            <li>Alt taraftaki <b>Araç Kutusu → Geçmiş (History)</b> sekmesine gel.</li>
+            <li>Sağ tık → <b>Rapor (Report)</b> → <b>HTML</b> olarak kaydet.</li>
+            <li>Oluşan HTML dosyasını siteye yükle.</li>
+          </ol>
+
+          <h4>🟨 Tickmill</h4>
+          <ol>
+            <li>Tickmill panelinde <b>İşlem / Emir Geçmişi</b> ekranına gir.</li>
+            <li><b>“Güncelleme Saati” sütunu olan</b> (tarihli) CSV'yi dışa aktar.</li>
+            <li>Bu CSV'yi siteye yükle — işlemler gün gün takvime dağılır.</li>
+          </ol>
+
+          <h4>🟩 TradingView üzerinden işlem yapanlar</h4>
+          <ol>
+            <li>TradingView'e <b>bağladığın broker hesabının emir geçmişini</b> indir.</li>
+            <li>İndirdiğin dosyayı (tercihen <b>tarihli</b> CSV) siteye yükle.</li>
+          </ol>
+
+          <h4>🟧 Fon firması (prop) hesabı</h4>
+          <ol>
+            <li>Fon firması panelinde / platformunda <b>“Generate Statement”</b> (statement oluştur) seçeneğine tıkla.</li>
+            <li>Oluşan <b>statement dosyasını</b> (PDF/HTML) indir.</li>
+            <li>Bu dosyayı buraya yükle.</li>
+          </ol>
+
+          <p class="jr-help-note">🔒 Yüklediğin veriler yalnızca senin cihazında saklanır, kimseyle paylaşılmaz.</p>
+        </div>
+      </details>
+
       <div class="jr-profiles" id="jr-profiles"></div>
       <div class="jr-mt5sum" id="jr-mt5sum" style="display:none"></div>
       <div class="jr-stats" id="jr-stats"></div>
