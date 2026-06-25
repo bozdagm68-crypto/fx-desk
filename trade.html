@@ -3145,8 +3145,16 @@ async function sbLoadFeed(){
     if(error)throw error;
     const {data:votes}=await sb.from('votes').select('*');
     const {data:comments}=await sb.from('comments').select('*').order('created_at',{ascending:true});
-    let profs=null; try{const r=await sb.from('profiles').select('id,username,avatar_url'); profs=r.data;}catch(e){}
-    const pmap={}; _sbAvatars={}; (profs||[]).forEach(pr=>{pmap[pr.id]=pr.username; if(pr.avatar_url)_sbAvatars[pr.id]=pr.avatar_url;});
+    // profil isim/avatar haritası — avatar_url kolonu yoksa sorgu düşmesin diye dayanıklı
+    let profs=[];
+    try{ const r=await sb.from('profiles').select('id,username,avatar_url'); if(r.error)throw r.error; profs=r.data||[]; }
+    catch(e){ try{ const r2=await sb.from('profiles').select('id,username'); profs=r2.data||[]; }catch(e2){} }
+    const pmap={}; _sbAvatars={};
+    profs.forEach(pr=>{ if(pr.username)pmap[pr.id]=pr.username; if(pr.avatar_url)_sbAvatars[pr.id]=pr.avatar_url; });
+    // isimleri gönderi/yorum yazarlarından da tamamla (profiles eksik/erişilemezse oylar "Kullanıcı" kalmasın)
+    (posts||[]).forEach(p=>{ if(p.user_id&&p.username&&!pmap[p.user_id])pmap[p.user_id]=p.username; });
+    (comments||[]).forEach(c=>{ if(c.user_id&&c.username&&!pmap[c.user_id])pmap[c.user_id]=c.username; });
+    if(currentUser&&currentUser.username&&!pmap[currentUser.id])pmap[currentUser.id]=currentUser.username;
     const vb={}; (votes||[]).forEach(v=>{const o=vb[v.post_id]||(vb[v.post_id]={agree:0,disagree:0,neutral:0});if(o[v.choice]!=null)o[v.choice]++;});
     const vl={}; (votes||[]).forEach(v=>{(vl[v.post_id]||(vl[v.post_id]=[])).push({uid:v.user_id,name:pmap[v.user_id]||'Kullanıcı',choice:v.choice});});
     const cb={}; (comments||[]).forEach(c=>{(cb[c.post_id]||(cb[c.post_id]=[])).push({id:c.id,uid:c.user_id,name:c.username,text:c.text,ts:new Date(c.created_at).getTime()});});
