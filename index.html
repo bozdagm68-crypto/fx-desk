@@ -585,6 +585,17 @@
   .jr-stats{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
   .jr-upload-head{background:var(--green);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
   .jr-upload-head:hover{filter:brightness(1.1)}
+  /* Gizleme (yayın) modu — para/rakamları bulanıklaştır */
+  .jr-priv-btn{background:var(--panel-2);color:var(--muted);border:1px solid var(--border);padding:9px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .jr-priv-btn:hover{filter:brightness(1.1)}
+  .jr-priv-btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  #view-journal.priv .jr-stats .jc-v,
+  #view-journal.priv .jr-pnl,
+  #view-journal.priv .pc-pnl,
+  #view-journal.priv .cal-p,
+  #view-journal.priv .cal-tot b,
+  #view-journal.priv .jr-charts canvas{filter:blur(7px);-webkit-filter:blur(7px);user-select:none;pointer-events:none}
+  #view-journal.priv .jr-charts canvas{filter:blur(11px);-webkit-filter:blur(11px)}
 
   .cal-cell,.cal-sum{height:88px}
   .cal-p{font-size:13px;font-weight:800;margin-top:6px}
@@ -1174,6 +1185,7 @@
       <div class="jr-head">
         <h2>📒 İşlem Günlüğü</h2>
         <div class="jr-viewtoggle"><button id="jr-view-table" class="active">📋 Tablo</button><button id="jr-view-cal">🗓 Takvim</button></div>
+        <button class="jr-priv-btn" id="jr-priv-btn" title="Yayında para/rakamları gizle">👁 Gizle</button>
         <button class="jr-upload-head" id="jr-import-head" title="MT5/fon HTML veya PDF raporu yükle">📥 Rapor Yükle</button>
         <input type="file" id="jr-import-head-file" accept=".html,.htm,.pdf,.csv" hidden>
         <button class="jr-addbtn" id="jr-add-btn">+ Yeni işlem</button>
@@ -2526,7 +2538,7 @@ function renderJrTable(){
       <td>${t.date||''}</td>
       <td><b>${esc(t.pair||'')}</b></td>
       <td><span class="jr-dir ${t.dir}">${t.dir==='short'?'Short':'Long'}</span></td>
-      <td class="${pnlc}">${c.pnl==null?'-':fmtUSD(c.pnl)}</td>
+      <td class="jr-pnl ${pnlc}">${c.pnl==null?'-':fmtUSD(c.pnl)}</td>
       <td><span class="jr-row-del" title="Sil">🗑</span></td>`;
     tr.querySelector('.jr-row-del').addEventListener('click',e=>{e.stopPropagation();if(confirm('İşlemi sil?')){jrTrades=jrTrades.filter(x=>x.id!==t.id);jrSaveData();renderJournal();}});
     if(t.img){tr.style.cursor='zoom-in';tr.addEventListener('click',()=>openLightbox(t.img));}
@@ -2889,6 +2901,14 @@ document.getElementById('pr-import-file').addEventListener('change',e=>{const f=
 document.getElementById('jr-view-table').addEventListener('click',()=>setJrView('table'));
 document.getElementById('jr-view-cal').addEventListener('click',()=>setJrView('cal'));
 document.getElementById('jr-pair-filter').addEventListener('change',e=>{jrPairFilter=e.target.value;jrPage=1;renderJrTable();});
+/* Gizleme (yayın) modu: para/rakamları bulanıklaştır — durum hatırlanır */
+let jrPriv=localStorage.getItem('fxdesk_jr_priv')==='1';
+function applyJrPriv(){
+  const sec=document.getElementById('view-journal'); if(sec)sec.classList.toggle('priv',jrPriv);
+  const b=document.getElementById('jr-priv-btn');
+  if(b){b.classList.toggle('on',jrPriv);b.innerHTML=jrPriv?'🙈 Gizli':'👁 Gizle';b.title=jrPriv?'Rakamlar gizli — göstermek için tıkla':'Yayında para/rakamları gizle';}
+}
+(function(){const b=document.getElementById('jr-priv-btn');if(b)b.addEventListener('click',()=>{jrPriv=!jrPriv;localStorage.setItem('fxdesk_jr_priv',jrPriv?'1':'0');applyJrPriv();});applyJrPriv();})();
 
 /* ===== MT5 PDF / RAPOR İÇE AKTARMA ===== */
 if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
@@ -3417,8 +3437,8 @@ function openDayModal(ds){
   const dt=new Date(ds+'T00:00:00');
   const title=dt.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
   const net=list.reduce((s,t)=>s+(t.pnl||0),0);
-  const rows=list.map(t=>`<tr><td><b>${esc(t.pair||'')}</b></td><td><span class="jr-dir ${t.dir}">${t.dir==='short'?'Short':'Long'}</span></td><td>${t.entry||'-'}</td><td>${t.exit||'-'}</td><td>${t.sl||'-'}</td><td>${t.tp||'-'}</td><td class="${t.rr>=0?'pos':'neg'}">${t.rr==null?'-':fmtR(t.rr)}</td><td class="${(t.pnl||0)>=0?'pos':'neg'}">${t.pnl==null?'-':fmtUSD(t.pnl)}</td><td>${esc(t.strategy||'')}</td><td>${emo[t.emotion]||''}</td></tr>`).join('');
-  document.getElementById('jr-day-title').textContent=title+' — '+list.length+' işlem · '+(net>=0?'+':'')+Math.round(net).toLocaleString('tr-TR')+' $';
+  const rows=list.map(t=>`<tr><td><b>${esc(t.pair||'')}</b></td><td><span class="jr-dir ${t.dir}">${t.dir==='short'?'Short':'Long'}</span></td><td>${t.entry||'-'}</td><td>${t.exit||'-'}</td><td>${t.sl||'-'}</td><td>${t.tp||'-'}</td><td class="${t.rr>=0?'pos':'neg'}">${t.rr==null?'-':fmtR(t.rr)}</td><td class="jr-pnl ${(t.pnl||0)>=0?'pos':'neg'}">${t.pnl==null?'-':fmtUSD(t.pnl)}</td><td>${esc(t.strategy||'')}</td><td>${emo[t.emotion]||''}</td></tr>`).join('');
+  document.getElementById('jr-day-title').innerHTML=esc(title)+' — '+list.length+' işlem · <span class="jr-pnl '+(net>=0?'pos':'neg')+'">'+(net>=0?'+':'')+Math.round(net).toLocaleString('tr-TR')+' $</span>';
   document.getElementById('jr-day-body').innerHTML='<table class="jr-table"><thead><tr><th>Parite</th><th>Yön</th><th>Giriş</th><th>Çıkış</th><th>SL</th><th>TP</th><th>RR</th><th>P&L</th><th>Strateji</th><th>Psik.</th></tr></thead><tbody>'+(rows||'<tr><td colspan="10">İşlem yok</td></tr>')+'</tbody></table>';
   document.getElementById('jr-day-modal').classList.add('open');
 }
