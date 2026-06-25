@@ -2540,14 +2540,57 @@ function parseCSV(text){
   }
   return out;
 }
+/* Tickmill "emir geçmişi" CSV'si: Sembol,Pozisyon,Miktar,Durum,Commission,Closed P&L,Net Closed P&L
+   - iptal edilen emirler ve P&L'siz açılış bacakları atlanır
+   - sadece "Net Closed P&L" (komisyon düşülmüş gerçek sonuç) dolu kapanmış işlemler alınır */
+function looksTickmill(text){
+  const head=(text.split(/\r?\n/)[0]||'').toLowerCase();
+  return head.includes('closed p&l')||(head.includes('sembol')&&head.includes('pozisyon')&&head.includes('durum'));
+}
+function parseTickmillCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return [];
+  const delim=((lines[0].match(/;/g)||[]).length>(lines[0].match(/,/g)||[]).length)?';':',';
+  const H=lines[0].split(delim).map(h=>h.trim().toLowerCase());
+  const si=H.findIndex(h=>h.includes('sembol')||h.includes('symbol')),
+        pzi=H.findIndex(h=>h.includes('pozisyon')||h.includes('position')||h.includes('yön')||h.includes('side')),
+        sti=H.findIndex(h=>h.includes('durum')||h.includes('status')),
+        qi=H.findIndex(h=>h.includes('miktar')||h.includes('volume')||h.includes('lot')),
+        di=H.findIndex(h=>h.includes('saat')||h.includes('tarih')||h.includes('güncelleme')||h.includes('time')||h.includes('date')),
+        npi=H.findIndex(h=>h.includes('net')&&h.includes('p&l')),
+        cpi=H.findIndex(h=>h.includes('closed')&&h.includes('p&l')&&!h.includes('net'));
+  const pli=npi>=0?npi:cpi; // tercih: komisyon dahil Net Closed P&L
+  if(si<0||pli<0)return [];
+  const out=[]; let k=0;
+  const today=new Date().toISOString().slice(0,10);
+  for(let n=1;n<lines.length;n++){
+    const c=lines[n].split(delim).map(x=>x.trim());
+    if(sti>=0&&/iptal/i.test(c[sti]||''))continue;              // iptal edilen emir
+    const raw=(c[pli]||'').replace(/[^0-9.\-]/g,'');
+    if(raw===''||isNaN(parseFloat(raw)))continue;               // sadece kapanmış (P&L'li) işlemler
+    const dirRaw=(pzi>=0?c[pzi]:'').toLowerCase();
+    const dtRaw=(di>=0?c[di]:'')||'';                            // "2026-06-15 02:33:40" (kapanış/güncelleme)
+    let date=today, time='', ts=Date.now()+k;
+    if(dtRaw){ date=normDate(dtRaw); const tm=dtRaw.match(/(\d{1,2}):(\d{2})/); if(tm)time=tm[1].padStart(2,'0')+':'+tm[2];
+      const pt=Date.parse(dtRaw.replace(' ','T')); if(!isNaN(pt))ts=pt; }
+    out.push({id:'t'+Date.now()+'_'+k,date,time,pair:(si>=0&&c[si])?c[si]:'—',
+      dir:/sat|sell|short/.test(dirRaw)?'short':'long',entry:'',exit:'',sl:'',risk:'',
+      strategy:'Tickmill import',emotion:3,plan:'',notes:(qi>=0&&c[qi])?c[qi]+' lot':'',
+      img:null,ts,pnlImp:Math.round(parseFloat(raw)*100)/100});
+    k++;
+  }
+  out.sort((a,b)=>a.ts-b.ts);                                   // kronolojik (eşitlik serileri / eğri doğru olsun)
+  return out;
+}
 function doImport(file){
   const name=(file.name||'').toLowerCase();
   if(name.endsWith('.pdf'))return importPDF(file);
   if(name.endsWith('.html')||name.endsWith('.htm'))return importHTML(file);
   const r=new FileReader();
   r.onload=e=>{
-    const rows=parseCSV(e.target.result);
-    if(!rows.length){alert('Dosyadan işlem okunamadı. CSV için date, symbol, type, profit sütunları gerekir.');return;}
+    const text=e.target.result;
+    const rows=looksTickmill(text)?parseTickmillCSV(text):parseCSV(text);
+    if(!rows.length){alert('Dosyadan işlem okunamadı. CSV için date, symbol, type, profit (veya Tickmill: Sembol, Pozisyon, Net Closed P&L) sütunları gerekir.');return;}
     applyImport(rows);
   };
   r.readAsText(file);
@@ -3187,10 +3230,25 @@ function toast(msg){
 }
 function updateBell(){const b=document.getElementById('cal-bell'); if(b)b.textContent=alarmOn?'🔔':'🔕';}
 function fireNotif(title,body){ try{ if('Notification'in window && Notification.permission==='granted'){ new Notification(title,{body:body}); return; } }catch(e){} toast(title.replace('FX Desk · ','')+' — '+body); }
+function nextHighEvent(){ if(typeof calEvents==='undefined')return null; const now=Date.now(); return calEvents.find(e=>e.impact==='High'&&e.date.getTime()>now)||null; }
+function alarmStatusMsg(){
+  const nx=nextHighEvent();
+  if(!nx)return 'Şu an yaklaşan yüksek etkili haber yok. Bir haber ~15 dk kala ve açıklandığı an seni uyaracağım.';
+  const diff=nx.date.getTime()-Date.now(), h=Math.floor(diff/3600e3), m=Math.max(1,Math.round(diff%3600e3/60e3));
+  const when=(h>0?h+' sa ':'')+m+' dk sonra';
+  return 'Sıradaki: '+(FLAG[nx.cur]||'')+' '+nx.cur+' · '+nx.title+' — '+when+' ('+fmtTime(nx.date)+'). ~15 dk kala ve açıklandığı an uyaracağım.';
+}
 function toggleAlarm(){
   alarmOn=!alarmOn; localStorage.setItem('fxdesk_alarm',alarmOn?'on':'off'); updateBell();
-  if(alarmOn){ if('Notification'in window && Notification.permission!=='granted'){try{Notification.requestPermission();}catch(e){}} toast('🔔 Haber alarmı açık — yüksek etkili haberlerden ~15 dk önce ve haber anında uyarılacaksın.'); }
-  else toast('🔕 Haber alarmı kapatıldı.');
+  if(!alarmOn){ toast('🔕 Haber alarmı kapatıldı.'); return; }
+  const finish=()=>{
+    const denied=('Notification'in window)&&Notification.permission==='denied';
+    toast('🔔 Haber alarmı açık. '+alarmStatusMsg()+(denied?' ⚠️ Tarayıcı bildirimleri kapalı — uyarılar yalnızca sayfa açıkken ekranda görünür.':' (Uyarı için sekme açık kalmalı.)'));
+    alarmCheck();
+  };
+  if('Notification'in window && Notification.permission==='default'){
+    try{ const r=Notification.requestPermission(); if(r&&r.then)r.then(finish); else finish(); }catch(e){ finish(); }
+  } else finish();
 }
 function alarmCheck(){
   if(!alarmOn||typeof calEvents==='undefined'||!calEvents.length)return;
@@ -3199,11 +3257,11 @@ function alarmCheck(){
     if(e.impact!=='High')return;
     const t=e.date.getTime(), diff=t-now, base=e.title+e.cur+t;
     if(diff>0 && diff<=15*60000 && !firedAlarms.has(base+'_15')){ firedAlarms.add(base+'_15'); fireNotif('FX Desk · Haber yaklaşıyor', (FLAG[e.cur]||'')+' '+e.cur+' · '+e.title+' — '+Math.max(1,Math.round(diff/60000))+' dk sonra ('+fmtTime(e.date)+')'); }
-    if(diff<=0 && diff>-60000 && !firedAlarms.has(base+'_0')){ firedAlarms.add(base+'_0'); fireNotif('FX Desk · Haber çıktı', (FLAG[e.cur]||'')+' '+e.cur+' · '+e.title+' şimdi açıklanıyor!'); }
+    if(diff<=0 && diff>-120000 && !firedAlarms.has(base+'_0')){ firedAlarms.add(base+'_0'); fireNotif('FX Desk · Haber çıktı', (FLAG[e.cur]||'')+' '+e.cur+' · '+e.title+' şimdi açıklanıyor!'); }
   });
 }
 setInterval(alarmCheck,30000);
-(function(){const b=document.getElementById('cal-bell'); if(b)b.addEventListener('click',toggleAlarm); updateBell();})();
+(function(){const b=document.getElementById('cal-bell'); if(b)b.addEventListener('click',toggleAlarm); updateBell(); if(alarmOn)setTimeout(alarmCheck,2000);})();
 
 /* ================= İSTATİSTİK ================= */
 let statsCharts={};
