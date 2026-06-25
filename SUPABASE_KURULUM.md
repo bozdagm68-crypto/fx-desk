@@ -254,6 +254,35 @@ Notlar:
 - **Mod / Ban:** Her satırdaki **Mod yap/al** ve **Banla/Yasağı kaldır** düğmeleri `admin_set_flags`'i çağırır. Yöneticiler üzerinde işlem yapılamaz. Banlanan kullanıcı **giriş yapamaz** (girişte ve oturum geri yüklemede kontrol edilir).
 - Kendi `last_seen`'ini güncelleme yetkisi, kurulumdaki mevcut `upd_profile` (yalnızca `auth.uid() = id`) kuralıyla zaten sağlanır; ek izin gerekmez.
 
+### Aktif süre ("Süre" sütunu)
+
+Admin tablosundaki **Süre** sütunu, kullanıcının uygulamada geçirdiği **toplam aktif süreyi** gösterir. Bunun için `profiles`'a bir sayaç kolonu + sayacı artıran bir fonksiyon gerekir. Aşağıdaki SQL'i **bir kez** çalıştır (SQL Editor):
+
+```sql
+-- 1) Aktif süre sayacı (saniye)
+alter table profiles add column if not exists total_seconds bigint default 0;
+
+-- 2) Giriş yapan kullanıcının kendi süresini artıran fonksiyon
+--    (site açık + sekme görünürken her ~30 sn'de bir çağrılır)
+create or replace function bump_activity(secs int)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update profiles
+     set total_seconds = coalesce(total_seconds, 0) + greatest(0, least(secs, 120))
+   where id = auth.uid();
+$$;
+
+grant execute on function bump_activity(int) to authenticated;
+```
+
+Notlar:
+- **Geçmişi saymaz:** Sayaç bu SQL'i çalıştırdığın andan itibaren birikmeye başlar; önceki kullanım geriye dönük gelmez. İlk başta herkes `-`/küçük değer görünür, kullandıkça dolar.
+- `least(secs, 120)` her çağrıyı en fazla 120 sn ile sınırlar (suistimale karşı; istemci 30 gönderir).
+- **Süre yine boş kalıyorsa:** Admin'in tüm kullanıcıların `total_seconds` değerini okuyabilmesi için `profiles` tablosunda **SELECT** (okuma) izninin açık olması gerekir. Kullanıcı adları zaten join'le okunabildiği için bu kural genelde mevcuttur; değilse profiles'a authenticated SELECT politikası ekle.
+
 ### (Opsiyonel) Ban'ı sunucu tarafında da zorla
 
 Tarayıcıdaki ban kontrolü teknik bir kullanıcı tarafından atlanabilir. Banlı birinin **içerik paylaşmasını/yorum/oy vermesini** sunucuda da engellemek istersen, insert kurallarına ban kontrolü ekle:

@@ -739,6 +739,8 @@
   .ad-tablewrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:auto}
   .ad-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px}
   .ad-table th{text-align:left;padding:10px;color:var(--muted);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--panel-2)}
+  .ad-table th.ad-sort{cursor:pointer;user-select:none;white-space:nowrap}
+  .ad-table th.ad-sort:hover{color:var(--accent)}
   .ad-table td{padding:10px;border-bottom:1px solid var(--border)}
   .ad-mods{display:flex;gap:8px;margin-bottom:8px}
   .ad-mods input{flex:1;max-width:280px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 11px;border-radius:7px;font-size:13px;font-family:inherit;outline:none}
@@ -3158,6 +3160,7 @@ setInterval(()=>{ // admin paneli açıkken aktiflik durumunu tazele
 },30000);
 
 let _adUserRows=[];
+let _adSort={key:'created_at',dir:'desc'}; // varsayılan: en yeni kayıt üstte
 async function renderAdminUsersSb(){
   const ut=document.getElementById('ad-users'); if(!ut)return;
   if(!ut.dataset.loaded)ut.innerHTML='<tr><td class="ad-muted" colspan="8">Yükleniyor…</td></tr>';
@@ -3179,8 +3182,21 @@ function paintAdminUsers(){
   const f=((document.getElementById('ad-user-search')||{}).value||'').trim().toLowerCase();
   const now=Date.now(); let online=0,banned=0;
   _adUserRows.forEach(u=>{const ls=u.last_seen?new Date(u.last_seen).getTime():0;if(ls&&(now-ls)<ONLINE_WINDOW_MS)online++;if(u.is_banned)banned++;});
-  const list=f?_adUserRows.filter(u=>((u.email||'')+' '+(u.username||'')).toLowerCase().includes(f)):_adUserRows;
-  let html='<tr><th>E-posta</th><th>Kullanıcı</th><th>Rol</th><th>Kayıt</th><th>Son aktif</th><th>Süre</th><th>Durum</th><th>İşlem</th></tr>';
+  let list=f?_adUserRows.filter(u=>((u.email||'')+' '+(u.username||'')).toLowerCase().includes(f)):_adUserRows.slice();
+  // sıralama
+  const sval=(u,k)=>{switch(k){
+    case 'email':return (u.email||'').toLowerCase();
+    case 'username':return (u.username||'').toLowerCase();
+    case 'role':return u.is_admin?2:(u.is_moderator?1:0);
+    case 'created_at':return u.created_at?new Date(u.created_at).getTime():0;
+    case 'last_seen':return u.last_seen?new Date(u.last_seen).getTime():0;
+    case 'total_seconds':return u.total_seconds||0;
+    case 'status':return u.is_banned?2:((u.last_seen&&(now-new Date(u.last_seen).getTime())<ONLINE_WINDOW_MS)?0:1);
+    default:return 0;}};
+  list.sort((a,b)=>{const x=sval(a,_adSort.key),y=sval(b,_adSort.key);const c=x<y?-1:(x>y?1:0);return _adSort.dir==='asc'?c:-c;});
+  const arrow=k=>_adSort.key===k?(_adSort.dir==='asc'?' ▲':' ▼'):'';
+  const th=(k,l)=>`<th class="ad-sort" data-sort="${k}">${l}${arrow(k)}</th>`;
+  let html='<tr>'+th('email','E-posta')+th('username','Kullanıcı')+th('role','Rol')+th('created_at','Kayıt')+th('last_seen','Son aktif')+th('total_seconds','Süre')+th('status','Durum')+'<th>İşlem</th></tr>';
   if(!list.length)html+='<tr><td class="ad-muted" colspan="8">Eşleşen kullanıcı yok.</td></tr>';
   list.forEach(u=>{
     const ls=u.last_seen?new Date(u.last_seen).getTime():0;
@@ -3191,6 +3207,12 @@ function paintAdminUsers(){
     html+=`<tr><td>${esc(u.email||'-')}</td><td>${esc(u.username||'')}</td><td>${role}</td><td>${u.created_at?fmtDT(u.created_at):'-'}</td><td>${ls?fmtDT(ls):'<span class="ad-muted">-</span>'}</td><td>${u.total_seconds?fmtDur(u.total_seconds):'<span class="ad-muted">-</span>'}</td><td>${durum}</td><td>${acts}</td></tr>`;
   });
   ut.innerHTML=html;
+  ut.querySelectorAll('th.ad-sort').forEach(h=>h.addEventListener('click',()=>{
+    const k=h.dataset.sort;
+    if(_adSort.key===k)_adSort.dir=_adSort.dir==='asc'?'desc':'asc';
+    else _adSort={key:k,dir:(k==='email'||k==='username')?'asc':'desc'};
+    paintAdminUsers();
+  }));
   ut.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>adUserAction(b.dataset.act,b.dataset.id)));
   const roleEl=document.getElementById('ad-role'); if(roleEl)roleEl.textContent='Yönetici · '+_adUserRows.length+' kullanıcı · '+online+' aktif'+(banned?' · '+banned+' banlı':'');
 }
