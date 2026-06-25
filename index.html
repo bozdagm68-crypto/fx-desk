@@ -260,6 +260,11 @@
   .vt-lbl{font-weight:700}
   .vt-lbl.agree{color:var(--green)} .vt-lbl.disagree{color:var(--red)} .vt-lbl.neutral{color:var(--gold)}
   .vt-names{color:var(--muted)}
+  .edited-tag{color:var(--muted);font-size:11px;font-style:italic}
+  /* admin düzenleme logu diff */
+  .el-diff{margin-top:5px;font-size:12px;display:flex;flex-direction:column;gap:2px}
+  .el-old{color:var(--red);text-decoration:line-through;opacity:.85;white-space:pre-wrap;word-break:break-word}
+  .el-new{color:var(--green);white-space:pre-wrap;word-break:break-word}
   /* avatar görsel (baş harf yerine foto) */
   .avatar img,.uc-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
   .avatar.has-img,.uc-avatar.has-img{background:transparent!important}
@@ -1319,6 +1324,8 @@
         <div id="ad-mod-list" class="ad-mod-list"></div>
         <h3 id="ad-fb-head">📨 Geri Bildirimler</h3>
         <div id="ad-feedback" class="ad-mod-content"></div>
+        <h3 id="ad-editlog-head">✏️ Düzenleme Logu</h3>
+        <div id="ad-editlog" class="ad-mod-content"></div>
       </div>
       <h3>🧹 İçerik Denetimi — Paylaşımlar</h3>
       <div id="ad-mod-content" class="ad-mod-content"></div>
@@ -1963,14 +1970,26 @@ function beginPostEdit(card,p){
   if(!textEl){textEl=document.createElement('div');textEl.className='post-text';const top=card.querySelector('.post-top');top.insertAdjacentElement('afterend',textEl);}
   openInlineEditor(textEl,v=>updatePost(p.id,v));
 }
+async function logEdit(kind,targetId,oldText,newText){
+  if(!currentUser)return;
+  if(!DEMO){
+    try{await sb.from('edit_logs').insert({user_id:currentUser.id,username:currentUser.username,kind,target_id:String(targetId),old_text:oldText,new_text:newText});}catch(e){}
+  } else {
+    try{const a=JSON.parse(localStorage.getItem('fxdesk_editlogs')||'[]');a.unshift({id:'el'+Date.now(),username:currentUser.username,kind,target_id:String(targetId),old_text:oldText,new_text:newText,ts:Date.now()});localStorage.setItem('fxdesk_editlogs',JSON.stringify(a.slice(0,500)));}catch(e){}
+  }
+}
 async function updatePost(id,newText){
   newText=(newText||'').trim();
   const p=feed.find(x=>x.id===id); if(!p||!currentUser)return;
   if(!(p.uid&&p.uid===currentUser.id)){alert('Bu paylaşımı düzenleme yetkin yok.');return;}
   if(!newText&&!postImgs(p).length){alert('Metin boş olamaz.');return;}
-  p.text=newText;
-  if(!DEMO){try{const {error}=await sb.from('posts').update({text:newText}).eq('id',id);if(error)throw error;}catch(e){alert('Kaydedilemedi: '+(e.message||e));}}
-  else saveFeed();
+  const old=p.text||''; if(old===newText){renderFeed();return;}
+  p.text=newText; p.edited=true;
+  if(!DEMO){
+    let err=null; try{const {error}=await sb.from('posts').update({text:newText,edited:true}).eq('id',id);err=error;}catch(e){err=e;}
+    if(err){try{await sb.from('posts').update({text:newText}).eq('id',id);}catch(e2){alert('Kaydedilemedi: '+(e2.message||e2));}}
+  } else saveFeed();
+  logEdit('post',id,old,newText);
   renderFeed();
 }
 async function updateComment(postId,ci,newText){
@@ -1979,9 +1998,13 @@ async function updateComment(postId,ci,newText){
   const c=p.comments[ci];
   if(!(c.uid&&c.uid===currentUser.id)){alert('Bu yorumu düzenleme yetkin yok.');return;}
   if(!newText){alert('Yorum boş olamaz.');return;}
-  c.text=newText;
-  if(!DEMO){try{const {error}=await sb.from('comments').update({text:newText}).eq('id',c.id);if(error)throw error;}catch(e){alert('Kaydedilemedi: '+(e.message||e));}}
-  else saveFeed();
+  const old=c.text||''; if(old===newText){openComments.add(postId);renderFeed();return;}
+  c.text=newText; c.edited=true;
+  if(!DEMO){
+    let err=null; try{const {error}=await sb.from('comments').update({text:newText,edited:true}).eq('id',c.id);err=error;}catch(e){err=e;}
+    if(err){try{await sb.from('comments').update({text:newText}).eq('id',c.id);}catch(e2){alert('Kaydedilemedi: '+(e2.message||e2));}}
+  } else saveFeed();
+  logEdit('comment',c.id,old,newText);
   openComments.add(postId); renderFeed();
 }
 async function deleteComment(postId,ci){
@@ -2100,7 +2123,7 @@ function renderFeed(){
         ${avatarBox(p.uid,p.name,'avatar')}
         <div class="post-meta">
           <span class="pname">${esc(p.name)}</span>
-          <span class="ptime">${timeAgo(p.ts)}</span>
+          <span class="ptime">${timeAgo(p.ts)}${p.edited?' · <span class="edited-tag">düzenlendi</span>':''}</span>
         </div>
         <div class="post-tags">
           <span class="chip-sym">${esc(p.symbol)}</span>
@@ -2122,7 +2145,7 @@ function renderFeed(){
         ${canDel?`<span class="del-btn" title="${currentUser.isAdmin?'Yönetici: paylaşımı sil':'Paylaşımını sil'}">🗑 Sil</span>`:''}
       </div>
       <div class="comments ${openComments.has(p.id)?'open':''}">
-        ${p.comments.map((c,ci)=>{const ownC=currentUser&&c.uid&&c.uid===currentUser.id;const canDelC=currentUser&&(ownC||currentUser.isAdmin);return `<div class="comment" data-ci="${ci}">${avatarBox(c.uid,c.name,'avatar')}<div class="cm-body"><div class="cmname">${esc(c.name)} <span style="color:var(--muted);font-weight:400;font-size:11px">· ${timeAgo(c.ts)}</span>${(ownC||canDelC)?`<span class="cm-acts">${ownC?'<b class="cm-edit" title="Düzenle">✏️</b>':''}${canDelC?'<b class="cm-del" title="Sil">🗑</b>':''}</span>`:''}</div><div class="cmtext">${esc(c.text)}</div></div></div>`;}).join('')}
+        ${p.comments.map((c,ci)=>{const ownC=currentUser&&c.uid&&c.uid===currentUser.id;const canDelC=currentUser&&(ownC||currentUser.isAdmin);return `<div class="comment" data-ci="${ci}">${avatarBox(c.uid,c.name,'avatar')}<div class="cm-body"><div class="cmname">${esc(c.name)} <span style="color:var(--muted);font-weight:400;font-size:11px">· ${timeAgo(c.ts)}${c.edited?' · <span class="edited-tag">düzenlendi</span>':''}</span>${(ownC||canDelC)?`<span class="cm-acts">${ownC?'<b class="cm-edit" title="Düzenle">✏️</b>':''}${canDelC?'<b class="cm-del" title="Sil">🗑</b>':''}</span>`:''}</div><div class="cmtext">${esc(c.text)}</div></div></div>`;}).join('')}
         <div class="cm-add"><input placeholder="Yorum yaz..." /><button>Gönder</button></div>
       </div>`;
     card.querySelectorAll('.vote').forEach(btn=>btn.addEventListener('click',()=>vote(p.id,btn.dataset.v)));
@@ -3043,6 +3066,7 @@ function renderAdmin(){
     }
     renderModList();
     renderFeedback();
+    renderEditLog();
   }
   const box=document.getElementById('ad-mod-content'); if(!box)return;
   const imgs=feed.filter(p=>postImgs(p).length);
@@ -3075,7 +3099,7 @@ setInterval(pingPresence,45000);
 setInterval(()=>{ // admin paneli açıkken aktiflik durumunu tazele
   if(DEMO)return;
   const av=document.getElementById('view-admin'); if(!av||av.style.display==='none')return;
-  if(currentUser&&currentUser.isAdmin){renderAdminUsersSb();renderFeedback();}
+  if(currentUser&&currentUser.isAdmin){renderAdminUsersSb();renderFeedback();renderEditLog();}
 },30000);
 
 let _adUserRows=[];
@@ -3157,8 +3181,8 @@ async function sbLoadFeed(){
     if(currentUser&&currentUser.username&&!pmap[currentUser.id])pmap[currentUser.id]=currentUser.username;
     const vb={}; (votes||[]).forEach(v=>{const o=vb[v.post_id]||(vb[v.post_id]={agree:0,disagree:0,neutral:0});if(o[v.choice]!=null)o[v.choice]++;});
     const vl={}; (votes||[]).forEach(v=>{(vl[v.post_id]||(vl[v.post_id]=[])).push({uid:v.user_id,name:pmap[v.user_id]||'Kullanıcı',choice:v.choice});});
-    const cb={}; (comments||[]).forEach(c=>{(cb[c.post_id]||(cb[c.post_id]=[])).push({id:c.id,uid:c.user_id,name:c.username,text:c.text,ts:new Date(c.created_at).getTime()});});
-    feed=(posts||[]).map(p=>({id:p.id,uid:p.user_id,name:p.username,symbol:p.symbol,bias:p.bias,text:p.text,imgs:parseImgUrl(p.img_url),ts:new Date(p.created_at).getTime(),votes:vb[p.id]||{agree:0,disagree:0,neutral:0},voters:vl[p.id]||[],comments:cb[p.id]||[]}));
+    const cb={}; (comments||[]).forEach(c=>{(cb[c.post_id]||(cb[c.post_id]=[])).push({id:c.id,uid:c.user_id,name:c.username,text:c.text,edited:!!c.edited,ts:new Date(c.created_at).getTime()});});
+    feed=(posts||[]).map(p=>({id:p.id,uid:p.user_id,name:p.username,symbol:p.symbol,bias:p.bias,text:p.text,edited:!!p.edited,imgs:parseImgUrl(p.img_url),ts:new Date(p.created_at).getTime(),votes:vb[p.id]||{agree:0,disagree:0,neutral:0},voters:vl[p.id]||[],comments:cb[p.id]||[]}));
     myVotes={}; if(currentUser)(votes||[]).forEach(v=>{if(v.user_id===currentUser.id)myVotes[v.post_id]=v.choice;});
     return true;
   }catch(e){console.warn('sbLoadFeed',e);return false;}
@@ -3340,6 +3364,15 @@ async function renderFeedback(){
   const hd=document.getElementById('ad-fb-head'); if(hd)hd.textContent='📨 Geri Bildirimler'+(list.length?' ('+list.length+')':'');
   box.innerHTML=list.length?list.map(fb=>'<div class="ad-item"><div class="ad-it-meta"><b>'+esc(fb.username||'?')+'</b> <span class="ad-muted">· '+fmtDT(fb.ts)+'</span><br>'+esc(fb.message)+'</div><div class="ad-acts"><button class="ad-del" data-fb="'+fb.id+'">Sil</button></div></div>').join(''):'<div class="ad-muted">Henüz geri bildirim yok.</div>';
   box.querySelectorAll('[data-fb]').forEach(b=>b.addEventListener('click',async()=>{const id=b.dataset.fb;if(!confirm('Geri bildirimi sil?'))return;if(!DEMO){try{await sb.from('feedback').delete().eq('id',id);}catch(e){}}else{const a=JSON.parse(localStorage.getItem('fxdesk_feedback')||'[]').filter(x=>x.id!==id);localStorage.setItem('fxdesk_feedback',JSON.stringify(a));}renderFeedback();}));
+}
+async function renderEditLog(){
+  const box=document.getElementById('ad-editlog'); if(!box)return;
+  if(!(currentUser&&currentUser.isAdmin)){box.innerHTML='';return;}
+  let list=[];
+  if(!DEMO){ try{const {data}=await sb.from('edit_logs').select('*').order('created_at',{ascending:false}).limit(200); list=(data||[]).map(x=>({id:x.id,username:x.username,kind:x.kind,old:x.old_text,neu:x.new_text,ts:new Date(x.created_at).getTime()}));}catch(e){} }
+  else list=(JSON.parse(localStorage.getItem('fxdesk_editlogs')||'[]')).map(x=>({id:x.id,username:x.username,kind:x.kind,old:x.old_text,neu:x.new_text,ts:x.ts}));
+  const hd=document.getElementById('ad-editlog-head'); if(hd)hd.textContent='✏️ Düzenleme Logu'+(list.length?' ('+list.length+')':'');
+  box.innerHTML=list.length?list.map(l=>'<div class="ad-item"><div class="ad-it-meta"><b>'+esc(l.username||'?')+'</b> <span class="ad-muted">· '+(l.kind==='post'?'paylaşım':'yorum')+' · '+fmtDT(l.ts)+'</span><div class="el-diff"><div class="el-old">− '+esc(l.old||'(boş)')+'</div><div class="el-new">+ '+esc(l.neu||'(boş)')+'</div></div></div></div>').join(''):'<div class="ad-muted">Henüz düzenleme yok.</div>';
 }
 (function(){const b=document.getElementById('beta-send'); if(b)b.addEventListener('click',sendFeedback);})();
 
@@ -3615,7 +3648,7 @@ let currentUser=null;
 
 function gateErr(m){const e=document.getElementById('gate-err');e.textContent=m||'';e.style.display=m?'block':'none';}
 function isAdminEmail(email){return ADMIN_EMAILS.map(e=>e.toLowerCase()).includes((email||'').toLowerCase());}
-async function fetchProfile(uid){try{const {data}=await sb.from('profiles').select('username,is_admin,is_moderator,is_banned').eq('id',uid).single();return data;}catch(e){return null;}}
+async function fetchProfile(uid){try{const {data}=await sb.from('profiles').select('username,is_admin,is_moderator,is_banned,avatar_url').eq('id',uid).single();return data;}catch(e){try{const {data}=await sb.from('profiles').select('username,is_admin,is_moderator,is_banned').eq('id',uid).single();return data;}catch(e2){return null;}}}
 function showGate(){document.getElementById('gate').style.display='flex';document.getElementById('user-chip').style.display='none';gateErr('');}
 function showApp(){
   document.getElementById('gate').style.display='none';
@@ -3716,7 +3749,7 @@ async function authInit(){
         if(p&&p.is_banned){await sb.auth.signOut();}
         else{
           const username=(u.user_metadata&&u.user_metadata.username)||(p&&p.username)||u.email.split('@')[0];
-          currentUser={id:u.id,email:u.email,username,isAdmin:isAdminEmail(u.email)||!!(p&&p.is_admin),isMod:!!(p&&p.is_moderator)};
+          currentUser={id:u.id,email:u.email,username,avatar:(p&&p.avatar_url)||null,isAdmin:isAdminEmail(u.email)||!!(p&&p.is_admin),isMod:!!(p&&p.is_moderator)};
         }
       }
     }catch(e){}
