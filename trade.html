@@ -279,6 +279,12 @@
   .my-act .ma-sym{color:var(--accent);font-weight:700}
   .my-act .ma-text{color:var(--text);line-height:1.4;white-space:pre-wrap;word-break:break-word}
   .my-act-empty{color:var(--muted);font-size:13px}
+  /* beta yol haritası */
+  .beta-roadmap{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}
+  .beta-roadmap li{background:var(--panel-2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:11px 13px}
+  .beta-roadmap li b{display:block;font-size:13.5px;color:var(--text);margin-bottom:3px}
+  .beta-roadmap li span{font-size:12.5px;color:var(--muted);line-height:1.5}
+  .beta-soon{display:inline-block;font-size:10.5px;font-weight:700;color:var(--accent);border:1px solid var(--accent);border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle}
 
   .compose{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:15px;margin-bottom:22px}
   .compose-row{display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap;align-items:center}
@@ -1389,6 +1395,14 @@
         <div class="set-field"><label>Sorun bildir / özellik öner</label><textarea id="beta-msg" rows="5" placeholder="Örn: 4'lü grafikte mumlar küçük görünüyor... / Şu özelliği eklemek isterdim..."></textarea></div>
         <button id="beta-send">Gönder</button>
         <div id="beta-thanks" class="beta-thanks" style="display:none">✅ Teşekkürler! Geri bildirimin bize ulaştı.</div>
+      </div>
+      <div class="set-card">
+        <h3>🗺️ Yakında Eklenecekler <span class="beta-soon">YOL HARİTASI</span></h3>
+        <p class="set-muted">Üzerinde çalıştığımız ve eklemeyi planladığımız başlıklar:</p>
+        <ul class="beta-roadmap">
+          <li><b>📊 FX Replay tarzı backtest</b><span>Geçmiş veri üzerinde işlem deneme (replay). Kullanıcılar backtest yapabilecek, sonuçlarını ve verilerini burada toplayıp biriktirebilecek.</span></li>
+          <li><b>🔄 Otomatik veri çekme — MetaTrader & fon firmaları</b><span>İşlemler MT5 ve fon firması hesaplarından otomatik aktarılacak; elle CSV yüklemeye gerek kalmayacak.</span></li>
+        </ul>
       </div>
     </div>
   </section>
