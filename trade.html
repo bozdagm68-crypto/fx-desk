@@ -3152,7 +3152,7 @@ async function pingPresence(){
 }
 setInterval(pingPresence,45000);
 // sunucuda geçirilen süreyi biriktir (görünür sekmedeyken) — admin "Süre" sütunu için
-setInterval(()=>{ if(DEMO||!sb||!currentUser)return; if(typeof document!=='undefined'&&document.visibilityState&&document.visibilityState!=='visible')return; try{sb.rpc('bump_activity',{secs:30});}catch(e){} },30000);
+setInterval(()=>{ if(DEMO||!sb||!currentUser)return; if(typeof document!=='undefined'&&document.visibilityState&&document.visibilityState!=='visible')return; sb.rpc('bump_activity',{secs:30}).then(()=>{},()=>{}); },30000);
 setInterval(()=>{ // admin paneli açıkken aktiflik durumunu tazele
   if(DEMO)return;
   const av=document.getElementById('view-admin'); if(!av||av.style.display==='none')return;
