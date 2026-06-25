@@ -278,6 +278,8 @@
   .my-act .ma-top{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:11px;margin-bottom:3px}
   .my-act .ma-sym{color:var(--accent);font-weight:700}
   .my-act .ma-text{color:var(--text);line-height:1.4;white-space:pre-wrap;word-break:break-word}
+  .ma-del{margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;cursor:pointer;font-family:inherit;transition:.12s}
+  .ma-del:hover{border-color:var(--red);color:var(--red)}
   .my-act-empty{color:var(--muted);font-size:13px}
   /* beta yol haritası */
   .beta-roadmap{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}
@@ -2087,12 +2089,14 @@ function renderMyActivity(){
   feed.forEach(p=>{(p.comments||[]).forEach(c=>{if(c.uid===uid)myComments.push({post:p,c});});});
   myComments.sort((a,b)=>b.c.ts-a.c.ts);
   let h='<div class="my-act-sec">📣 Paylaşımlarım ('+myPosts.length+')</div>';
-  h+= myPosts.length ? '<div class="my-act-list">'+myPosts.map(p=>`<div class="my-act"><div class="ma-top"><span class="ma-sym">${esc(p.symbol||'—')}</span><span class="bias ${p.bias}">${biasLabel(p.bias)}</span><span>${timeAgo(p.ts)}</span></div><div class="ma-text">${esc(p.text||'(yazı yok)')}</div></div>`).join('')+'</div>'
+  h+= myPosts.length ? '<div class="my-act-list">'+myPosts.map(p=>`<div class="my-act"><div class="ma-top"><span class="ma-sym">${esc(p.symbol||'—')}</span><span class="bias ${p.bias}">${biasLabel(p.bias)}</span><span>${timeAgo(p.ts)}</span><button class="ma-del" data-del-post="${esc(p.id)}" title="Paylaşımı sil">🗑 Sil</button></div><div class="ma-text">${esc(p.text||'(yazı yok)')}</div></div>`).join('')+'</div>'
     : '<div class="my-act-empty">Henüz paylaşımın yok.</div>';
   h+='<div class="my-act-sec">💬 Yorumlarım ('+myComments.length+')</div>';
-  h+= myComments.length ? '<div class="my-act-list">'+myComments.map(x=>`<div class="my-act"><div class="ma-top"><span class="ma-sym">${esc(x.post.symbol||'—')}</span><span>${timeAgo(x.c.ts)}</span></div><div class="ma-text">${esc(x.c.text)}</div></div>`).join('')+'</div>'
+  h+= myComments.length ? '<div class="my-act-list">'+myComments.map(x=>{const ci=x.post.comments.indexOf(x.c);return `<div class="my-act"><div class="ma-top"><span class="ma-sym">${esc(x.post.symbol||'—')}</span><span>${timeAgo(x.c.ts)}</span><button class="ma-del" data-del-cpost="${esc(x.post.id)}" data-del-ci="${ci}" title="Yorumu sil">🗑 Sil</button></div><div class="ma-text">${esc(x.c.text)}</div></div>`;}).join('')+'</div>'
     : '<div class="my-act-empty">Henüz yorumun yok.</div>';
   box.innerHTML=h;
+  box.querySelectorAll('[data-del-post]').forEach(b=>b.addEventListener('click',async()=>{await deletePost(b.dataset.delPost);renderMyActivity();}));
+  box.querySelectorAll('[data-del-cpost]').forEach(b=>b.addEventListener('click',async()=>{await deleteComment(b.dataset.delCpost,+b.dataset.delCi);renderMyActivity();}));
 }
 
 /* görsel küçültme (localStorage'ı şişirmemek için) */
@@ -3110,6 +3114,8 @@ async function pingPresence(){
   try{await sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);}catch(e){}
 }
 setInterval(pingPresence,45000);
+// sunucuda geçirilen süreyi biriktir (görünür sekmedeyken) — admin "Süre" sütunu için
+setInterval(()=>{ if(DEMO||!sb||!currentUser)return; if(typeof document!=='undefined'&&document.visibilityState&&document.visibilityState!=='visible')return; try{sb.rpc('bump_activity',{secs:30});}catch(e){} },30000);
 setInterval(()=>{ // admin paneli açıkken aktiflik durumunu tazele
   if(DEMO)return;
   const av=document.getElementById('view-admin'); if(!av||av.style.display==='none')return;
@@ -3119,15 +3125,17 @@ setInterval(()=>{ // admin paneli açıkken aktiflik durumunu tazele
 let _adUserRows=[];
 async function renderAdminUsersSb(){
   const ut=document.getElementById('ad-users'); if(!ut)return;
-  if(!ut.dataset.loaded)ut.innerHTML='<tr><td class="ad-muted" colspan="7">Yükleniyor…</td></tr>';
+  if(!ut.dataset.loaded)ut.innerHTML='<tr><td class="ad-muted" colspan="8">Yükleniyor…</td></tr>';
   try{
     const {data,error}=await sb.rpc('admin_list_users');
     if(error)throw error;
     _adUserRows=data||[];
   }catch(e){
-    ut.innerHTML='<tr><td class="ad-muted" colspan="7">Kullanıcı listesi alınamadı. Supabase\'de <b>admin_list_users</b> ve <b>admin_set_flags</b> fonksiyonlarını kurman gerekiyor (SUPABASE_KURULUM.md → "Kullanıcı listesi" adımı).</td></tr>';
+    ut.innerHTML='<tr><td class="ad-muted" colspan="8">Kullanıcı listesi alınamadı. Supabase\'de <b>admin_list_users</b> ve <b>admin_set_flags</b> fonksiyonlarını kurman gerekiyor (SUPABASE_KURULUM.md → "Kullanıcı listesi" adımı).</td></tr>';
     return;
   }
+  // kullanıcı sürelerini profiles.total_seconds'tan ekle (admin_list_users'a dokunmadan)
+  try{const {data:pp}=await sb.from('profiles').select('id,total_seconds'); if(pp){const m={};pp.forEach(r=>{m[r.id]=r.total_seconds||0;});_adUserRows.forEach(u=>{u.total_seconds=m[u.id]||0;});}}catch(e){}
   ut.dataset.loaded='1';
   paintAdminUsers();
 }
@@ -3137,15 +3145,15 @@ function paintAdminUsers(){
   const now=Date.now(); let online=0,banned=0;
   _adUserRows.forEach(u=>{const ls=u.last_seen?new Date(u.last_seen).getTime():0;if(ls&&(now-ls)<ONLINE_WINDOW_MS)online++;if(u.is_banned)banned++;});
   const list=f?_adUserRows.filter(u=>((u.email||'')+' '+(u.username||'')).toLowerCase().includes(f)):_adUserRows;
-  let html='<tr><th>E-posta</th><th>Kullanıcı</th><th>Rol</th><th>Kayıt</th><th>Son aktif</th><th>Durum</th><th>İşlem</th></tr>';
-  if(!list.length)html+='<tr><td class="ad-muted" colspan="7">Eşleşen kullanıcı yok.</td></tr>';
+  let html='<tr><th>E-posta</th><th>Kullanıcı</th><th>Rol</th><th>Kayıt</th><th>Son aktif</th><th>Süre</th><th>Durum</th><th>İşlem</th></tr>';
+  if(!list.length)html+='<tr><td class="ad-muted" colspan="8">Eşleşen kullanıcı yok.</td></tr>';
   list.forEach(u=>{
     const ls=u.last_seen?new Date(u.last_seen).getTime():0;
     const on=ls&&(now-ls)<ONLINE_WINDOW_MS;
     const role=u.is_admin?'Yönetici':(u.is_moderator?'Moderatör':'Üye');
     const durum=u.is_banned?'<span class="ad-banned">🚫 Banlı</span>':(on?'<span class="online-dot"></span>Aktif':'<span class="ad-muted">Çevrimdışı</span>');
     const acts=u.is_admin?'<span class="ad-muted">—</span>':`<button class="ad-mini" data-act="mod" data-id="${u.id}">${u.is_moderator?'Mod al':'Mod yap'}</button><button class="ad-mini danger" data-act="ban" data-id="${u.id}">${u.is_banned?'Yasağı kaldır':'Banla'}</button>`;
-    html+=`<tr><td>${esc(u.email||'-')}</td><td>${esc(u.username||'')}</td><td>${role}</td><td>${u.created_at?fmtDT(u.created_at):'-'}</td><td>${ls?fmtDT(ls):'<span class="ad-muted">-</span>'}</td><td>${durum}</td><td>${acts}</td></tr>`;
+    html+=`<tr><td>${esc(u.email||'-')}</td><td>${esc(u.username||'')}</td><td>${role}</td><td>${u.created_at?fmtDT(u.created_at):'-'}</td><td>${ls?fmtDT(ls):'<span class="ad-muted">-</span>'}</td><td>${u.total_seconds?fmtDur(u.total_seconds):'<span class="ad-muted">-</span>'}</td><td>${durum}</td><td>${acts}</td></tr>`;
   });
   ut.innerHTML=html;
   ut.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>adUserAction(b.dataset.act,b.dataset.id)));
