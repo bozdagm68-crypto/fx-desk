@@ -397,8 +397,9 @@
   /* giriş / kayıt ekranı */
   .gate{position:fixed;inset:0;background:radial-gradient(900px 600px at 30% 20%,rgba(0,242,255,.10),transparent 60%),radial-gradient(800px 600px at 80% 90%,rgba(167,139,250,.10),transparent 60%),radial-gradient(circle at 50% 28%,#0a0a0a,#020202 72%);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px}
   .gate-card{width:360px;max-width:94vw;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:26px;box-shadow:0 25px 70px rgba(0,0,0,.55)}
-  .gate-brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:18px;justify-content:center;margin-bottom:20px;letter-spacing:.3px}
-  .gate-brand .dot{width:11px;height:11px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+  .gate-brand{display:flex;align-items:center;gap:13px;font-weight:800;font-size:42px;justify-content:center;margin-bottom:22px;letter-spacing:.5px;flex-wrap:wrap}
+  .gate-brand .dot{width:16px;height:16px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green)}
+  .gate-brand .beta-tag{font-size:16px;font-weight:800;letter-spacing:1.5px;color:#fff;background:linear-gradient(135deg,var(--accent),#a855f7);padding:5px 12px;border-radius:8px;align-self:center;text-transform:uppercase;box-shadow:0 4px 14px rgba(124,92,255,.4)}
   .gate-tabs{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:3px;margin-bottom:16px}
   .gate-tabs button{flex:1;background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;padding:9px;border-radius:7px;cursor:pointer;font-family:inherit;transition:.12s}
   .gate-tabs button.active{background:var(--accent);color:#fff}
@@ -832,6 +833,7 @@
   @media(max-width:780px){
     .gate-inner{flex-direction:column;gap:22px}
     .gate-hero{text-align:center}
+    .gate-brand{font-size:32px}
     .gate-sub2{margin-left:auto;margin-right:auto}
     .gate-feats{display:none}
     .gate-card{width:100%;max-width:360px}
@@ -1044,7 +1046,7 @@
 <div id="gate" class="gate" style="display:none">
   <div class="gate-inner">
     <div class="gate-hero">
-      <div class="gate-brand"><span class="dot"></span> FX&nbsp;DESK</div>
+      <div class="gate-brand"><span class="dot"></span> FX&nbsp;DESK <span class="beta-tag">BETA</span></div>
       <h1 class="gate-h1">Trade et, analiz et, paylaş.</h1>
       <p class="gate-sub2">Canlı grafik ve ekonomik takvim, Tradezella tarzı işlem günlüğü, MT5/fon raporu içe aktarma ve trader topluluğu — hepsi tek yerde.</p>
       <ul class="gate-feats">
