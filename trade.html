@@ -1895,26 +1895,29 @@ let composeImgs=[];           // paylaşıma eklenen görseller (en fazla 3)
 const MAX_IMGS=3;
 let feedFilter='all';
 let feedSym='all';            // aktif parite filtresi (Paylaşımlar)
-/* parite filtresi: sembolden para birimi/varlık etiketleri çıkar (EUR/USD -> EUR, USD) */
-const SYM_TOKENS=['EUR','USD','GBP','JPY','CHF','AUD','CAD','NZD','TRY','XAU','XAG','GOLD','BTC','ETH','SOL','XRP','USDT.D','DXY','NAS','US30','SPX','OIL'];
+/* parite filtresi: sabit sekmeler (sırasıyla) — her zaman görünür */
 function feedSymKey(s){return (s||'').toString().toUpperCase().replace(/[^A-Z0-9.]/g,'');}
-function postSymTags(p){
-  const k=feedSymKey(p.symbol); if(!k)return [];
-  const tags=SYM_TOKENS.filter(t=>k.includes(feedSymKey(t)));
-  return tags.length?tags:[(p.symbol||'—').toString().toUpperCase()];
-}
-function postHasSym(p,tok){ return postSymTags(p).indexOf(tok)>=0; }
+const ALT_TOKENS=['SOL','XRP','ADA','AVAX','BNB','DOGE','DOT','MATIC','POL','LINK','TRX','LTC','BCH','SHIB','ATOM','UNI','NEAR','APT','ARB','PEPE','SUI','TON','XLM','ETC','FIL','ICP','HBAR','VET','ALGO','AAVE','INJ','SEI','RNDR','RENDER','FET','TIA','WIF','BONK','FLOKI','RUNE','GALA','SAND','MANA','AXS','FTM','EGLD','XMR','XTZ','CRO','KAS','ONDO','JUP','PYTH','OP'];
+const FEED_TABS=[
+  {k:'DXY',    t:s=>s.includes('DXY')},
+  {k:'EUR',    t:s=>s.includes('EUR')},
+  {k:'GBP',    t:s=>s.includes('GBP')},
+  {k:'XAU',    t:s=>s.includes('XAU')||s.includes('GOLD')},
+  {k:'BTC',    t:s=>s.includes('BTC')||s.includes('BITCOIN')},
+  {k:'ETH',    t:s=>s.includes('ETH')},
+  {k:'USDT.D', t:s=>s.includes('USDT.D')||s.includes('USDTD')},
+  {k:'Altcoin',t:s=>ALT_TOKENS.some(a=>s===a||s.startsWith(a))}
+];
+function postHasSym(p,key){ const k=feedSymKey(p.symbol); if(!k)return false; const tab=FEED_TABS.find(x=>x.k===key); return tab?tab.t(k):false; }
 function renderSymFilter(){
   const box=document.getElementById('feed-symfilter'); if(!box)return;
-  const counts={};
-  feed.forEach(p=>{ if(hidden.has(p.id))return; new Set(postSymTags(p)).forEach(t=>counts[t]=(counts[t]||0)+1); });
-  const toks=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]||a.localeCompare(b));
-  if(!toks.length){box.style.display='none';return;}
-  if(feedSym!=='all'&&!counts[feedSym])feedSym='all';   // filtrelenen parite kalmadıysa sıfırla
+  const counts={}; FEED_TABS.forEach(t=>counts[t.k]=0);
+  feed.forEach(p=>{ if(hidden.has(p.id))return; const k=feedSymKey(p.symbol); if(!k)return; FEED_TABS.forEach(t=>{if(t.t(k))counts[t.k]++;}); });
+  if(feedSym!=='all'&&!FEED_TABS.some(t=>t.k===feedSym))feedSym='all';
   box.style.display='flex';
   box.innerHTML='<span class="fsf-lbl">🔎 Parite:</span>'
     +'<button class="fsf'+(feedSym==='all'?' active':'')+'" data-s="all">Tümü</button>'
-    +toks.map(t=>'<button class="fsf'+(feedSym===t?' active':'')+'" data-s="'+esc(t)+'">'+esc(t)+'<span class="fsf-n">'+counts[t]+'</span></button>').join('');
+    +FEED_TABS.map(t=>'<button class="fsf'+(feedSym===t.k?' active':'')+'" data-s="'+esc(t.k)+'">'+esc(t.k)+(counts[t.k]?'<span class="fsf-n">'+counts[t.k]+'</span>':'')+'</button>').join('');
   box.querySelectorAll('.fsf').forEach(b=>b.addEventListener('click',()=>{feedSym=b.dataset.s;renderFeed();}));
 }
 /* bir paylaşımın görsellerini normalize et: yeni çoklu (imgs[]) + eski tekli (img) uyumlu */
