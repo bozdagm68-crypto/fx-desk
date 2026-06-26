@@ -288,6 +288,9 @@
   .beta-roadmap li span{font-size:12.5px;color:var(--muted);line-height:1.5}
   .beta-soon{display:inline-block;font-size:10.5px;font-weight:700;color:var(--accent);border:1px solid var(--accent);border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle}
 
+  .feed-disclaimer{background:color-mix(in srgb,var(--red) 10%, var(--panel));border:1px solid color-mix(in srgb,var(--red) 28%, var(--border));border-radius:10px;padding:11px 14px;margin-bottom:18px;font-size:12.5px;line-height:1.55;color:var(--muted)}
+  .feed-disclaimer b{color:var(--text)}
+  .c-disc{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.5}
   .compose{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:15px;margin-bottom:22px}
   .compose-row{display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap;align-items:center}
   .c-in{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 11px;border-radius:7px;font-size:13px;font-family:inherit;outline:none}
@@ -1146,6 +1149,8 @@
       </div>
       <div class="senti" id="senti" style="display:none"></div>
 
+      <div class="feed-disclaimer">⚠️ <b>Yatırım tavsiyesi değildir.</b> Bu platformda paylaşılan hiçbir içerik yatırım tavsiyesi niteliği taşımaz; yalnızca kişisel görüş ve analizdir. Tüm işlem kararları ve riskler size aittir — herkes kendi bireysel riskinden sorumludur.</div>
+
       <!-- paylaşım oluştur -->
       <div class="compose">
         <div class="compose-row">
@@ -1176,6 +1181,7 @@
           <span class="imgname" id="c-imgname">veya alana <b style="color:var(--text)">Ctrl+V</b> ile yapıştır</span>
           <button id="c-post" class="post-btn">Paylaş</button>
         </div>
+        <div class="c-disc">Paylaştığın içerik yatırım tavsiyesi sayılmaz; sorumluluk paylaşana ve okuyana aittir.</div>
         <div id="c-preview" class="c-preview"></div>
       </div>
 
