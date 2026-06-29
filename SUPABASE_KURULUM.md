@@ -407,3 +407,23 @@ Bu adımları yapıp anahtarları yapıştırdığında **giriş/kayıt gerçek*
 - **Güvenlik:** investor şifresi salt-okunur; yine de yalnızca backend'de saklanır.
 
 Kaynaklar: https://metaapi.cloud/ · https://metaapi.cloud/docs/client/
+
+---
+
+## 📓 İşlem Günlüğüm (notebook) — `nb_state` tablosu
+
+"İşlem Günlüğüm" sekmesi, kişisel kayıtları (setup görseli + giriş/çıkış + RR + TP/Stop + after-chart) her cihazda görebilmen için Supabase'de saklar. Bu tablo **bir kez** oluşturulmalı (Journal'ın `jr_state` tablosundan bağımsızdır). Supabase → **SQL Editor**'de çalıştır:
+
+```sql
+create table if not exists nb_state (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  data jsonb,
+  updated_at timestamptz default now()
+);
+alter table nb_state enable row level security;
+create policy "nb_state self" on nb_state
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
+
+- Görseller mevcut `screenshots` bucket'ına yüklenir; tabloda yalnızca URL tutulur (tablo küçük kalır).
+- Tablo henüz yoksa veri **yine de** tarayıcıda (localStorage) çalışır; tabloyu açınca otomatik cihazlar arası senkron olur.
