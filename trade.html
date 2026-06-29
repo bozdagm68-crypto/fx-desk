@@ -511,6 +511,15 @@
   .nb-top h2{font-size:19px;font-weight:700}
   .nb-hint{font-size:12px;color:var(--muted)}
   .nb-hint b{color:var(--accent)}
+  .nb-profiles{display:flex;align-items:center;gap:7px;margin-bottom:12px;flex-wrap:wrap}
+  .nb-prof{display:inline-flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--border);color:var(--muted);padding:7px 13px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  .nb-prof:hover{border-color:var(--accent)}
+  .nb-prof.active{background:rgba(109,93,252,.14);border-color:var(--accent);color:var(--text)}
+  .nb-prof-n{font-size:11px;color:var(--muted);background:var(--bg);padding:1px 7px;border-radius:10px;font-weight:700}
+  .nb-prof-ed,.nb-prof-del{font-size:12px;opacity:.65}
+  .nb-prof-ed:hover,.nb-prof-del:hover{opacity:1}
+  .nb-prof-add{background:transparent;border:1px dashed var(--border);color:var(--muted);padding:7px 13px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  .nb-prof-add:hover{border-color:var(--accent);color:var(--text)}
   .nb-scroll{flex:1;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--panel)}
   .nbt{border-collapse:collapse;width:100%;font-size:13px;min-width:1180px}
   .nbt th{position:sticky;top:0;z-index:3;background:var(--panel-2);text-align:left;padding:9px 11px;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);border-right:1px solid var(--border);white-space:nowrap}
@@ -1412,6 +1421,7 @@
         <h2>📓 İşlem Günlüğüm</h2>
         <span class="nb-hint">Görsel kutusuna tıklayıp <b>Ctrl+V</b> ile yapıştır (hücre başına 3 görsele kadar) · tarih/saat otomatik · RR otomatik (Net P&amp;L ÷ Riske Edilen)</span>
       </div>
+      <div class="nb-profiles" id="nb-profiles"></div>
       <div class="jr-filterbar" id="nb-filterbar">
         <span class="jr-fb-lbl">🔎 Parite:</span>
         <select id="nb-pair-filter" class="jr-pair-sel"><option value="all">Tüm pariteler</option></select>
@@ -3451,8 +3461,35 @@ let nbData=[];
 let nbPasteTarget=null;   // {id,field} — Ctrl+V hedefi
 let nbFileTarget=null;    // {id,field} — dosya seç hedefi
 let nbPairFilter='all';   // parite filtresi
+let nbProfiles=[];        // [{id,name}] — günlük profilleri (Backtest/Cash...)
+let nbActiveId=null;      // aktif profil id
 
-function nbKey(){return 'fxdesk_notebook_'+(currentUser?currentUser.id:'anon');}
+function nbUid(){return currentUser?currentUser.id:'anon';}
+function nbProfKey(){return 'fxdesk_nbprofiles_'+nbUid();}
+function nbActiveKey(){return 'fxdesk_nbactive_'+nbUid();}
+function nbDataKeyFor(id){return 'fxdesk_notebook_'+nbUid()+'_'+id;}
+function nbKey(){return nbDataKeyFor(nbActiveId);}
+
+function nbLoadProfiles(){try{const a=JSON.parse(localStorage.getItem(nbProfKey()));return Array.isArray(a)?a:[];}catch(e){return [];}}
+function nbSaveProfiles(){localStorage.setItem(nbProfKey(),JSON.stringify(nbProfiles));nbPushState();}
+function nbEnsureProfiles(){
+  nbProfiles=nbLoadProfiles();
+  if(!nbProfiles.length){
+    nbProfiles=[{id:'p'+Date.now(),name:'Genel'}];
+    localStorage.setItem(nbProfKey(),JSON.stringify(nbProfiles));
+    // eski profilsiz veriyi ilk profile taşı
+    const oldKey='fxdesk_notebook_'+nbUid();
+    const old=localStorage.getItem(oldKey);
+    if(old!=null){localStorage.setItem(nbDataKeyFor(nbProfiles[0].id),old);localStorage.removeItem(oldKey);}
+    localStorage.setItem(nbActiveKey(),nbProfiles[0].id);
+  }
+  nbActiveId=localStorage.getItem(nbActiveKey());
+  if(!nbActiveId||!nbProfiles.some(p=>p.id===nbActiveId)){nbActiveId=nbProfiles[0].id;localStorage.setItem(nbActiveKey(),nbActiveId);}
+}
+function nbProfCount(id){
+  if(id===nbActiveId)return nbData.length;
+  try{const a=JSON.parse(localStorage.getItem(nbDataKeyFor(id)));return Array.isArray(a)?a.length:0;}catch(e){return 0;}
+}
 function nbLoad(){
   try{const a=JSON.parse(localStorage.getItem(nbKey()));nbData=Array.isArray(a)?a:[];}catch(e){nbData=[];}
   // eski tekli görsel alanlarını diziye taşı (imgs/aimgs)
@@ -3467,12 +3504,20 @@ let _nbSaveT=null;
 function nbSaveSoon(){clearTimeout(_nbSaveT);_nbSaveT=setTimeout(nbSaveData,400);}
 
 /* Supabase senkron (kişiye özel, jr_state'ten bağımsız — nb_state tablosu) */
+function nbStateKeys(){
+  const uid=nbUid(); const out=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);
+    if(k&&(k===('fxdesk_nbprofiles_'+uid)||k===('fxdesk_nbactive_'+uid)||k.startsWith('fxdesk_notebook_'+uid)))out.push(k);
+  }
+  return out;
+}
 let _nbPushT=null;
 function nbPushState(){
   if(DEMO||!sb||!currentUser)return;
   clearTimeout(_nbPushT);
   _nbPushT=setTimeout(async()=>{
-    try{await sb.from('nb_state').upsert({user_id:currentUser.id,data:{[nbKey()]:localStorage.getItem(nbKey())},updated_at:new Date().toISOString()});}catch(e){console.warn('nbPush',e);}
+    const data={}; nbStateKeys().forEach(k=>data[k]=localStorage.getItem(k));
+    try{await sb.from('nb_state').upsert({user_id:currentUser.id,data,updated_at:new Date().toISOString()});}catch(e){console.warn('nbPush',e);}
   },800);
 }
 async function nbPullState(){
@@ -3480,7 +3525,7 @@ async function nbPullState(){
   try{
     const {data,error}=await sb.from('nb_state').select('data').eq('user_id',currentUser.id).maybeSingle();
     if(error||!data||!data.data)return;
-    const v=data.data[nbKey()]; if(v!=null)localStorage.setItem(nbKey(),v);
+    Object.entries(data.data).forEach(([k,v])=>{if(v!=null)localStorage.setItem(k,v);});
   }catch(e){console.warn('nbPull',e);}
 }
 /* görseli sakla: zaten URL ise dokunma; canlıda bucket'a yükle; demoda base64 kalır */
@@ -3521,6 +3566,40 @@ function nbImgCell(r,field){
   return `<td class="nb-imgcell" data-id="${r.id}" data-field="${field}"><div class="nb-imgs">${inner}</div></td>`;
 }
 
+function renderNbProfiles(){
+  const bar=document.getElementById('nb-profiles'); if(!bar)return;
+  bar.innerHTML=nbProfiles.map(p=>{
+    const act=p.id===nbActiveId;
+    return `<button class="nb-prof ${act?'active':''}" data-id="${p.id}">${esc(p.name)} <span class="nb-prof-n">${nbProfCount(p.id)}</span>${act?` <span class="nb-prof-ed" title="Yeniden adlandır">✎</span><span class="nb-prof-del" title="Profili sil">🗑</span>`:''}</button>`;
+  }).join('')+`<button class="nb-prof-add" id="nb-prof-add">＋ Profil</button>`;
+}
+function nbSetActive(id){
+  if(id===nbActiveId)return;
+  nbActiveId=id; localStorage.setItem(nbActiveKey(),id);
+  nbPairFilter='all'; nbPasteTarget=null;
+  renderNotebook(); nbPushState();
+}
+function nbAddProfile(){
+  const name=(prompt('Yeni profil adı (örn. Backtest, Cash, FTMO):','')||'').trim();
+  if(!name)return;
+  const p={id:'p'+Date.now(),name}; nbProfiles.push(p); nbSaveProfiles();
+  nbActiveId=p.id; localStorage.setItem(nbActiveKey(),p.id);
+  nbPairFilter='all'; nbPasteTarget=null; renderNotebook();
+}
+function nbRenameProfile(id){
+  const p=nbProfiles.find(x=>x.id===id); if(!p)return;
+  const name=(prompt('Profil adı:',p.name)||'').trim(); if(!name)return;
+  p.name=name; nbSaveProfiles(); renderNbProfiles();
+}
+function nbDeleteProfile(id){
+  if(nbProfiles.length<=1){alert('En az bir profil olmalı — son profili silemezsin.');return;}
+  const p=nbProfiles.find(x=>x.id===id); if(!p)return;
+  if(!confirm('“'+p.name+'” profili ve içindeki TÜM kayıtlar silinsin mi? Bu geri alınamaz.'))return;
+  localStorage.removeItem(nbDataKeyFor(id));
+  nbProfiles=nbProfiles.filter(x=>x.id!==id);
+  if(nbActiveId===id){nbActiveId=nbProfiles[0].id;localStorage.setItem(nbActiveKey(),nbActiveId);}
+  nbSaveProfiles(); nbPairFilter='all'; nbPasteTarget=null; renderNotebook();
+}
 function renderNbFilter(){
   const sel=document.getElementById('nb-pair-filter'); if(!sel)return;
   const counts={}; nbData.forEach(r=>{const p=r.pair||''; if(p)counts[p]=(counts[p]||0)+1;});
@@ -3530,7 +3609,9 @@ function renderNbFilter(){
   sel.value=nbPairFilter;
 }
 function renderNotebook(){
+  nbEnsureProfiles();
   nbLoad();
+  renderNbProfiles();
   renderNbFilter();
   const tb=document.getElementById('nb-tbody'), empty=document.getElementById('nb-empty');
   if(!tb)return;
@@ -3637,6 +3718,10 @@ function nbWire(){
 
   root.addEventListener('click',e=>{
     const t=e.target;
+    if(t.closest('#nb-prof-add')){nbAddProfile();return;}
+    if(t.classList.contains('nb-prof-ed')){e.stopPropagation();const b=t.closest('.nb-prof');if(b)nbRenameProfile(b.dataset.id);return;}
+    if(t.classList.contains('nb-prof-del')){e.stopPropagation();const b=t.closest('.nb-prof');if(b)nbDeleteProfile(b.dataset.id);return;}
+    const prof=t.closest('.nb-prof'); if(prof){nbSetActive(prof.dataset.id);return;}
     if(t.classList.contains('nb-rowdel')){const id=t.dataset.id;if(confirm('Satırı sil?')){nbData=nbData.filter(x=>x.id!==id);if(nbPasteTarget&&nbPasteTarget.id===id)nbPasteTarget=null;nbSaveData();renderNotebook();}return;}
     if(t.classList.contains('nb-imx')){e.stopPropagation();const cell=t.closest('.nb-imgcell');const r=nbRec(cell.dataset.id);const idx=+t.dataset.idx;if(r&&Array.isArray(r[cell.dataset.field])){r[cell.dataset.field].splice(idx,1);nbSaveData();renderNotebook();}return;}
     if(t.classList.contains('nb-thumb2')){openLightbox(t.dataset.full);return;}
