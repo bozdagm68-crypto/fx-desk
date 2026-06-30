@@ -534,8 +534,10 @@
   .nbt td{padding:0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);vertical-align:middle}
   .nbt tr:hover td{background:rgba(255,255,255,.018)}
   .nbc-dt{width:172px}.nbc-pair{width:120px}.nbc-img{width:128px}.nbc-tf{width:108px}
-  .nbc-desc{min-width:200px}.nbc-strat{width:140px}.nbc-num{width:112px}.nbc-rr{width:78px}.nbc-pos{width:108px}.nbc-del{width:38px}
+  .nbc-desc{min-width:200px}.nbc-strat{width:140px}.nbc-num{width:112px}.nbc-rr{width:78px}.nbc-pos{width:108px}.nbc-del{width:64px}
   .nb-strat{border-radius:0}
+  .nb-acts{display:flex;gap:8px;justify-content:center;align-items:center}
+  .nb-share{cursor:pointer;opacity:.55;font-size:14px}.nb-share:hover{opacity:1}
   /* satır içi inputlar */
   .nb-in{width:100%;background:transparent;border:none;color:var(--text);padding:10px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box}
   .nb-in:focus{background:var(--bg);box-shadow:inset 0 0 0 2px var(--accent)}
@@ -3677,7 +3679,7 @@ function renderNotebook(){
       `<td><input class="nb-in num" data-id="${r.id}" data-field="risk" inputmode="decimal" value="${r.risk!=null?r.risk:''}" placeholder="0"></td>`+
       nbSelect('pos',r.pos||'',r.id,'pos')+
       nbImgCell(r,'aimgs')+
-      `<td><div class="nb-rowdel" data-id="${r.id}" title="Satırı sil">🗑</div></td>`;
+      `<td><div class="nb-acts"><span class="nb-share" data-id="${r.id}" title="Paylaşımlar'a gönder">📤</span><span class="nb-rowdel" data-id="${r.id}" title="Satırı sil">🗑</span></div></td>`;
     tb.appendChild(tr);
   });
   tb.querySelectorAll('textarea.nb-ta').forEach(nbAutosize);
@@ -3742,6 +3744,32 @@ function nbArm(id,field){
   const cell=document.querySelector(`.nb-imgcell[data-id="${id}"][data-field="${field}"]`); if(cell)cell.classList.add('armed');
 }
 
+/* ---- bir setup'ı Paylaşımlar'a gönder (köprü) ---- */
+function nbShareRow(id){
+  const r=nbRec(id); if(!r)return;
+  // görseller: önce setup, sonra after — en fazla 3
+  composeImgs=[...(r.imgs||[]),...(r.aimgs||[])].filter(Boolean).slice(0,MAX_IMGS);
+  // sembol (serbest alana paritenin tamamı)
+  const cs=document.getElementById('c-sym'); if(cs)cs.value=r.pair||'';
+  composeSym=''; document.querySelectorAll('.spx').forEach(x=>x.classList.remove('sel'));
+  // günlükte yön yok → bias nötr varsayılan (kullanıcı değiştirebilir)
+  composeBias='neutral'; document.querySelectorAll('.bp').forEach(x=>x.classList.toggle('sel',x.dataset.b==='neutral'));
+  // metin: açıklama + strateji/TF/RR
+  const rr=(r.rr!=null)?r.rr:nbAutoRR(r);
+  const meta=[];
+  if(r.strat)meta.push('Strateji: '+r.strat);
+  if(r.tf)meta.push('TF: '+r.tf);
+  if(rr!=null)meta.push('RR: '+(rr>=0?'+':'')+rr.toFixed(2)+'R');
+  let text=r.desc||'';
+  if(meta.length)text=(text?text+'\n\n':'')+meta.join(' · ');
+  const ct=document.getElementById('c-text'); if(ct)ct.value=text;
+  // Paylaşımlar sekmesine geç, composer'ı göster
+  switchTab('feed');
+  updateImgName(); renderComposePreview();
+  const cmp=document.querySelector('.compose'); if(cmp)cmp.scrollIntoView({behavior:'smooth',block:'start'});
+  if(ct)ct.focus();
+}
+
 /* ---- olay bağlama (bir kez) ---- */
 function nbWire(){
   const root=document.getElementById('view-notebook'); if(!root)return;
@@ -3788,6 +3816,7 @@ function nbWire(){
     if(t.classList.contains('nb-prof-ed')){e.stopPropagation();const b=t.closest('.nb-prof');if(b)nbRenameProfile(b.dataset.id);return;}
     if(t.classList.contains('nb-prof-del')){e.stopPropagation();const b=t.closest('.nb-prof');if(b)nbDeleteProfile(b.dataset.id);return;}
     const prof=t.closest('.nb-prof'); if(prof){nbSetActive(prof.dataset.id);return;}
+    if(t.classList.contains('nb-share')){nbShareRow(t.dataset.id);return;}
     if(t.classList.contains('nb-rowdel')){const id=t.dataset.id;if(confirm('Satırı sil?')){nbData=nbData.filter(x=>x.id!==id);if(nbPasteTarget&&nbPasteTarget.id===id)nbPasteTarget=null;nbSaveData();renderNotebook();}return;}
     if(t.classList.contains('nb-imx')){e.stopPropagation();const cell=t.closest('.nb-imgcell');const r=nbRec(cell.dataset.id);const idx=+t.dataset.idx;if(r&&Array.isArray(r[cell.dataset.field])){r[cell.dataset.field].splice(idx,1);nbSaveData();renderNotebook();}return;}
     if(t.classList.contains('nb-thumb2')){openLightbox(t.dataset.full);return;}
