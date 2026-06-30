@@ -520,13 +520,22 @@
   .nb-prof-ed:hover,.nb-prof-del:hover{opacity:1}
   .nb-prof-add{background:transparent;border:1px dashed var(--border);color:var(--muted);padding:7px 13px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
   .nb-prof-add:hover{border-color:var(--accent);color:var(--text)}
+  /* profil özeti kartları */
+  .nb-summary{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:12px}
+  .nb-summary:empty{display:none}
+  .nb-sc{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:9px 14px;min-width:92px}
+  .nb-sc .l{font-size:10.5px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+  .nb-sc .v{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+  .nb-sc .v small{font-size:11px;font-weight:600;color:var(--muted)}
+  .nb-sc .v.pos{color:var(--green)}.nb-sc .v.neg{color:var(--red)}.nb-sc .v.acc{color:var(--accent)}
   .nb-scroll{flex:1;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--panel)}
-  .nbt{border-collapse:collapse;width:100%;font-size:13px;min-width:1180px}
+  .nbt{border-collapse:collapse;width:100%;font-size:13px;min-width:1320px}
   .nbt th{position:sticky;top:0;z-index:3;background:var(--panel-2);text-align:left;padding:9px 11px;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);border-right:1px solid var(--border);white-space:nowrap}
   .nbt td{padding:0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);vertical-align:middle}
   .nbt tr:hover td{background:rgba(255,255,255,.018)}
   .nbc-dt{width:172px}.nbc-pair{width:120px}.nbc-img{width:128px}.nbc-tf{width:108px}
-  .nbc-desc{min-width:220px}.nbc-num{width:112px}.nbc-rr{width:78px}.nbc-pos{width:108px}.nbc-del{width:38px}
+  .nbc-desc{min-width:200px}.nbc-strat{width:140px}.nbc-num{width:112px}.nbc-rr{width:78px}.nbc-pos{width:108px}.nbc-del{width:38px}
+  .nb-strat{border-radius:0}
   /* satır içi inputlar */
   .nb-in{width:100%;background:transparent;border:none;color:var(--text);padding:10px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box}
   .nb-in:focus{background:var(--bg);box-shadow:inset 0 0 0 2px var(--accent)}
@@ -554,9 +563,6 @@
   .nb-rowdel{cursor:pointer;opacity:.45;text-align:center;font-size:15px;padding:8px}.nb-rowdel:hover{opacity:1}
   .nb-addrow{margin:10px;background:transparent;border:1.5px dashed var(--border);color:var(--muted);padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
   .nb-addrow:hover{border-color:var(--accent);color:var(--text)}
-  .nb-foot{display:flex;gap:26px;padding:14px 6px 2px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
-  .nb-foot b{color:var(--text);font-variant-numeric:tabular-nums}
-  .nb-foot b.pos{color:var(--green)}.nb-foot b.neg{color:var(--red)}
   .nb-empty2{padding:30px;text-align:center;color:var(--muted);font-size:13px}
 
 
@@ -1422,9 +1428,12 @@
         <span class="nb-hint">Görsel kutusuna tıklayıp <b>Ctrl+V</b> ile yapıştır (hücre başına 3 görsele kadar) · tarih/saat otomatik · RR otomatik (Net P&amp;L ÷ Riske Edilen)</span>
       </div>
       <div class="nb-profiles" id="nb-profiles"></div>
+      <div class="nb-summary" id="nb-summary"></div>
       <div class="jr-filterbar" id="nb-filterbar">
         <span class="jr-fb-lbl">🔎 Parite:</span>
         <select id="nb-pair-filter" class="jr-pair-sel"><option value="all">Tüm pariteler</option></select>
+        <span class="jr-fb-lbl">🎯 Strateji:</span>
+        <select id="nb-strat-filter" class="jr-pair-sel"><option value="all">Tüm stratejiler</option></select>
       </div>
       <div class="nb-scroll">
         <table class="nbt">
@@ -1434,6 +1443,7 @@
             <th class="nbc-img">İşlem Grafiği</th>
             <th class="nbc-tf">Time Frame</th>
             <th class="nbc-desc">Açıklama</th>
+            <th class="nbc-strat">Strateji</th>
             <th class="nbc-num">Net P&amp;L</th>
             <th class="nbc-rr">RR</th>
             <th class="nbc-num">Riske Edilen</th>
@@ -1446,9 +1456,9 @@
         <div class="nb-empty2" id="nb-empty" style="display:none"></div>
         <button class="nb-addrow" id="nb-add-btn">+ Yeni satır</button>
       </div>
-      <div class="nb-foot" id="nb-foot"></div>
     </div>
     <input type="file" id="nb-file" accept="image/*" hidden>
+    <datalist id="nb-strats"></datalist>
   </section>
 
   <section id="view-admin" class="view" style="display:none">
@@ -3461,8 +3471,30 @@ let nbData=[];
 let nbPasteTarget=null;   // {id,field} — Ctrl+V hedefi
 let nbFileTarget=null;    // {id,field} — dosya seç hedefi
 let nbPairFilter='all';   // parite filtresi
+let nbStratFilter='all';  // strateji filtresi
 let nbProfiles=[];        // [{id,name}] — günlük profilleri (Backtest/Cash...)
 let nbActiveId=null;      // aktif profil id
+
+/* strateji etiketine değere göre tutarlı renk üret */
+function nbStratHue(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h;}
+function nbStratStyle(s){if(!s)return '';const h=nbStratHue(s);return `background:hsla(${h},60%,55%,.16);color:hsl(${h},75%,75%);font-weight:600`;}
+/* strateji önerileri: hazır presetler + kullanıcının tüm profillerinde yazdıkları */
+const NB_STRAT_PRESETS=['OB (Order Block)','FVG','Likidite','Kırılım','Geri çekilme','Trend takibi','Destek-Direnç','BOS / CHoCH'];
+function nbAllStrats(){
+  const set=new Set(); const uid=nbUid();
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);
+    if(k&&k.startsWith('fxdesk_notebook_'+uid)){
+      try{const a=JSON.parse(localStorage.getItem(k));if(Array.isArray(a))a.forEach(r=>{if(r&&r.strat)set.add(r.strat);});}catch(e){}
+    }
+  }
+  return set;
+}
+function renderStratDatalist(){
+  const dl=document.getElementById('nb-strats'); if(!dl)return;
+  const all=[...NB_STRAT_PRESETS];
+  nbAllStrats().forEach(s=>{if(!all.includes(s))all.push(s);});
+  dl.innerHTML=all.map(s=>`<option>${esc(s)}</option>`).join('');
+}
 
 function nbUid(){return currentUser?currentUser.id:'anon';}
 function nbProfKey(){return 'fxdesk_nbprofiles_'+nbUid();}
@@ -3576,7 +3608,7 @@ function renderNbProfiles(){
 function nbSetActive(id){
   if(id===nbActiveId)return;
   nbActiveId=id; localStorage.setItem(nbActiveKey(),id);
-  nbPairFilter='all'; nbPasteTarget=null;
+  nbPairFilter='all'; nbStratFilter='all'; nbPasteTarget=null;
   renderNotebook(); nbPushState();
 }
 function nbAddProfile(){
@@ -3584,7 +3616,7 @@ function nbAddProfile(){
   if(!name)return;
   const p={id:'p'+Date.now(),name}; nbProfiles.push(p); nbSaveProfiles();
   nbActiveId=p.id; localStorage.setItem(nbActiveKey(),p.id);
-  nbPairFilter='all'; nbPasteTarget=null; renderNotebook();
+  nbPairFilter='all'; nbStratFilter='all'; nbPasteTarget=null; renderNotebook();
 }
 function nbRenameProfile(id){
   const p=nbProfiles.find(x=>x.id===id); if(!p)return;
@@ -3598,20 +3630,31 @@ function nbDeleteProfile(id){
   localStorage.removeItem(nbDataKeyFor(id));
   nbProfiles=nbProfiles.filter(x=>x.id!==id);
   if(nbActiveId===id){nbActiveId=nbProfiles[0].id;localStorage.setItem(nbActiveKey(),nbActiveId);}
-  nbSaveProfiles(); nbPairFilter='all'; nbPasteTarget=null; renderNotebook();
+  nbSaveProfiles(); nbPairFilter='all'; nbStratFilter='all'; nbPasteTarget=null; renderNotebook();
 }
 function renderNbFilter(){
-  const sel=document.getElementById('nb-pair-filter'); if(!sel)return;
-  const counts={}; nbData.forEach(r=>{const p=r.pair||''; if(p)counts[p]=(counts[p]||0)+1;});
-  const pairs=Object.keys(counts).sort();
-  if(nbPairFilter!=='all'&&!counts[nbPairFilter])nbPairFilter='all';
-  sel.innerHTML=`<option value="all">Tüm pariteler (${nbData.length})</option>`+pairs.map(p=>`<option value="${esc(p)}">${esc(p)} (${counts[p]})</option>`).join('');
-  sel.value=nbPairFilter;
+  const sel=document.getElementById('nb-pair-filter');
+  if(sel){
+    const counts={}; nbData.forEach(r=>{const p=r.pair||''; if(p)counts[p]=(counts[p]||0)+1;});
+    const pairs=Object.keys(counts).sort();
+    if(nbPairFilter!=='all'&&!counts[nbPairFilter])nbPairFilter='all';
+    sel.innerHTML=`<option value="all">Tüm pariteler (${nbData.length})</option>`+pairs.map(p=>`<option value="${esc(p)}">${esc(p)} (${counts[p]})</option>`).join('');
+    sel.value=nbPairFilter;
+  }
+  const ss=document.getElementById('nb-strat-filter');
+  if(ss){
+    const sc={}; nbData.forEach(r=>{const s=r.strat||''; if(s)sc[s]=(sc[s]||0)+1;});
+    const strats=Object.keys(sc).sort();
+    if(nbStratFilter!=='all'&&!sc[nbStratFilter])nbStratFilter='all';
+    ss.innerHTML=`<option value="all">Tüm stratejiler (${nbData.length})</option>`+strats.map(s=>`<option value="${esc(s)}">${esc(s)} (${sc[s]})</option>`).join('');
+    ss.value=nbStratFilter;
+  }
 }
 function renderNotebook(){
   nbEnsureProfiles();
   nbLoad();
   renderNbProfiles();
+  renderStratDatalist();
   renderNbFilter();
   const tb=document.getElementById('nb-tbody'), empty=document.getElementById('nb-empty');
   if(!tb)return;
@@ -3628,6 +3671,7 @@ function renderNotebook(){
       nbImgCell(r,'imgs')+
       nbSelect('tf',r.tf||'',r.id,'tf')+
       `<td><textarea class="nb-in nb-ta" rows="1" data-id="${r.id}" data-field="desc" placeholder="açıklama…">${esc(r.desc||'')}</textarea></td>`+
+      `<td><input class="nb-in nb-strat" list="nb-strats" data-id="${r.id}" data-field="strat" value="${esc(r.strat||'')}" placeholder="strateji…" style="${nbStratStyle(r.strat||'')}"></td>`+
       `<td><input class="nb-in num ${r.pnl>0?'pos':r.pnl<0?'neg':''}" data-id="${r.id}" data-field="pnl" inputmode="decimal" value="${r.pnl!=null?r.pnl:''}" placeholder="0"></td>`+
       `<td><input class="nb-in num rr" data-id="${r.id}" data-field="rr" inputmode="decimal" value="${rr!=null?rr:''}" placeholder="oto"></td>`+
       `<td><input class="nb-in num" data-id="${r.id}" data-field="risk" inputmode="decimal" value="${r.risk!=null?r.risk:''}" placeholder="0"></td>`+
@@ -3638,26 +3682,45 @@ function renderNotebook(){
   });
   tb.querySelectorAll('textarea.nb-ta').forEach(nbAutosize);
   if(nbPasteTarget){const cell=tb.querySelector(`.nb-imgcell[data-id="${nbPasteTarget.id}"][data-field="${nbPasteTarget.field}"]`);if(cell)cell.classList.add('armed');}
-  nbRenderFoot(rows);
+  nbRenderSummary(rows);
 }
 function nbAutosize(ta){ta.style.height='auto';ta.style.height=Math.max(40,ta.scrollHeight)+'px';}
-function nbRenderFoot(rows){
-  const f=document.getElementById('nb-foot'); if(!f)return;
-  rows=rows||nbData;
+function nbRenderSummary(rows){
+  const box=document.getElementById('nb-summary'); if(!box)return;
+  rows=rows||nbFilteredRows();
   const n=rows.length;
+  if(!n){box.innerHTML='';return;}
   const pnl=rows.reduce((s,r)=>s+(+r.pnl||0),0);
   const tp=rows.filter(r=>r.pos==='TP').length, stop=rows.filter(r=>r.pos==='Stop').length;
   const wr=(tp+stop)?Math.round(tp/(tp+stop)*100):0;
-  const flt=nbPairFilter!=='all'?` <span class="upr-badge">${esc(nbPairFilter)}</span>`:'';
-  f.innerHTML=`<span>Satır: <b>${n}</b>${flt}</span><span>Toplam Net P&L: <b class="${pnl>0?'pos':pnl<0?'neg':''}">${pnl?fmtUSD(pnl):'0 $'}</b></span><span>TP / Stop: <b>${tp}</b> / <b>${stop}</b></span><span>Başarı: <b>%${wr}</b></span>`;
+  const rrs=rows.map(r=>r.rr!=null?r.rr:nbAutoRR(r)).filter(v=>v!=null);
+  const avgRR=rrs.length?rrs.reduce((a,b)=>a+b,0)/rrs.length:null;
+  const totR=rrs.reduce((a,b)=>a+b,0);
+  const pc={}; rows.forEach(r=>{if(r.pair)pc[r.pair]=(pc[r.pair]||0)+1;});
+  const topPair=Object.keys(pc).sort((a,b)=>pc[b]-pc[a])[0]||'—';
+  const wp=rows.filter(r=>r.pnl!=null);
+  const best=wp.length?wp.reduce((m,r)=>r.pnl>m.pnl?r:m):null;
+  const worst=wp.length?wp.reduce((m,r)=>r.pnl<m.pnl?r:m):null;
+  const card=(l,v,cls)=>`<div class="nb-sc"><div class="l">${l}</div><div class="v ${cls||''}">${v}</div></div>`;
+  const rTxt=v=>(v>=0?'+':'')+v.toFixed(2)+'R';
+  let html='';
+  html+=card('İşlem',n);
+  html+=card('Toplam P&L',pnl?fmtUSD(pnl):'0 $',pnl>0?'pos':pnl<0?'neg':'');
+  html+=card('Ort. RR',avgRR!=null?rTxt(avgRR):'—',avgRR>0?'pos':avgRR<0?'neg':'');
+  html+=card('Toplam R',(totR>=0?'+':'')+totR.toFixed(1)+'R',totR>0?'pos':totR<0?'neg':'');
+  html+=card('Başarı',(tp+stop)?'%'+wr+' <small>('+tp+'/'+(tp+stop)+')</small>':'—','acc');
+  if(nbPairFilter==='all')html+=card('En çok parite',esc(topPair));
+  if(best)html+=card('En iyi',fmtUSD(best.pnl)+' <small>'+esc(best.pair||'')+'</small>','pos');
+  if(worst&&worst!==best)html+=card('En kötü',fmtUSD(worst.pnl)+' <small>'+esc(worst.pair||'')+'</small>','neg');
+  box.innerHTML=html;
 }
 
 function nbRec(id){return nbData.find(x=>x.id===id);}
 function nbSetField(id,field,val){const r=nbRec(id);if(r)r[field]=val;}
-function nbFilteredRows(){return nbData.filter(r=>nbPairFilter==='all'||(r.pair||'')===nbPairFilter);}
+function nbFilteredRows(){return nbData.filter(r=>(nbPairFilter==='all'||(r.pair||'')===nbPairFilter)&&(nbStratFilter==='all'||(r.strat||'')===nbStratFilter));}
 
 function nbAddRow(){
-  const r={id:'nb'+Date.now(),dt:new Date().toISOString(),pair:(nbPairFilter!=='all'?nbPairFilter:''),imgs:[],tf:'',desc:'',pnl:null,rr:null,risk:null,pos:'',aimgs:[]};
+  const r={id:'nb'+Date.now(),dt:new Date().toISOString(),pair:(nbPairFilter!=='all'?nbPairFilter:''),imgs:[],tf:'',desc:'',strat:(nbStratFilter!=='all'?nbStratFilter:''),pnl:null,rr:null,risk:null,pos:'',aimgs:[]};
   nbData.push(r); nbSaveData();
   nbPasteTarget={id:r.id,field:'imgs'};
   renderNotebook();
@@ -3684,6 +3747,7 @@ function nbWire(){
   const root=document.getElementById('view-notebook'); if(!root)return;
   document.getElementById('nb-add-btn').addEventListener('click',nbAddRow);
   const pf=document.getElementById('nb-pair-filter'); if(pf)pf.addEventListener('change',()=>{nbPairFilter=pf.value;renderNotebook();});
+  const sf=document.getElementById('nb-strat-filter'); if(sf)sf.addEventListener('change',()=>{nbStratFilter=sf.value;renderNotebook();});
 
   root.addEventListener('input',e=>{
     const el=e.target, id=el.dataset&&el.dataset.id, field=el.dataset&&el.dataset.field;
@@ -3696,14 +3760,16 @@ function nbWire(){
       const r=nbRec(id);
       if(r&&(r.rr==null||r._rrAuto)){r.rr=nbAutoRR(r);r._rrAuto=true;const rrIn=root.querySelector(`.nb-in.rr[data-id="${id}"]`);if(rrIn&&document.activeElement!==rrIn)rrIn.value=(r.rr!=null?r.rr:'');}
       if(field==='pnl'){el.classList.toggle('pos',v>0);el.classList.toggle('neg',v<0);}
-      nbRenderFoot(nbFilteredRows()); nbSaveSoon(); return;
+      nbRenderSummary(nbFilteredRows()); nbSaveSoon(); return;
     }
     if(field==='rr'){const v=el.value!==''?+el.value:null;const r=nbRec(id);if(r){r.rr=v;r._rrAuto=false;}nbSaveSoon();return;}
+    if(field==='strat'){nbSetField(id,'strat',el.value);el.setAttribute('style',nbStratStyle(el.value));nbSaveSoon();return;}
   });
 
   root.addEventListener('change',e=>{
     const el=e.target;
     if(el.classList&&el.classList.contains('nb-dt')){nbSetField(el.dataset.id,'dt',el.value?new Date(el.value).toISOString():null);nbSaveSoon();return;}
+    if(el.classList&&el.classList.contains('nb-strat')){nbSaveData(); if(nbStratFilter!=='all'){renderNotebook();} else {renderNbFilter();} return;}
     if(el.classList&&el.classList.contains('nb-selover')){
       const {id,field,type}=el.dataset; nbSetField(id,field,el.value);
       const pill=el.parentElement.querySelector('.nb-pill');
@@ -3712,7 +3778,7 @@ function nbWire(){
         else{pill.className='nb-pill empty';pill.style.background='';pill.style.color='';pill.textContent='— seç —';}}
       nbSaveData();
       if(field==='pair'){ if(nbPairFilter!=='all'){renderNotebook();} else {renderNbFilter();} return; }
-      if(field==='pos')nbRenderFoot(nbFilteredRows());
+      if(field==='pos')nbRenderSummary(nbFilteredRows());
     }
   });
 

@@ -9,6 +9,11 @@
 <!-- Aklına gelenleri buraya yaz; ben düzenleyip sıralarım -->
 - [ ] (boş — sıradakini yaz)
 
+## ⭐ Sıradaki seçilenler — 2026-06-30 (sırayla yapılacak)
+1. [x] **İşlem Günlüğüm: profil özeti + strateji etiketi** — ✅ Üstte özet kartları (İşlem, Toplam P&L, Ort. RR, Toplam R, Başarı %, En çok parite, En iyi/En kötü işlem) — aktif profil + filtreye göre. Tabloya **Strateji** kolonu (serbest metin — istediğini elle yaz; hazır öneriler OB/FVG/Likidite/Kırılım… + **kullanıcının kendi yazdığı stratejiler tüm profillerinden toplanıp öneri listesine eklenir**; değere göre otomatik renkli etiket) + **strateji filtresi** (parite filtresinin yanında). Filtre seçince özet o seçime göre güncellenir (örn. sadece FVG → FVG başarı %'si).
+2. [ ] **İşlem Günlüğüm → Paylaş köprüsü** — Bir satırdaki setup'ı tek tıkla Paylaşımlar'a gönder; görseller + RR + açıklama (+ strateji) otomatik dolu gelsin.
+3. [ ] **Gated access (başvuru + admin onay / davet kodu)** — Özel Discord lansmanı için. Yeni kayıt "onay bekliyor" olur; admin panelinden onayla/reddet **veya** davet kodu ile kayıt. *(auth/RLS'e dokunur — ayrı, dikkatli bir geçiş; Supabase'de SQL gerekecek)*
+
 ---
 
 ## 🎯 UI / UX iyileştirmeleri — 2026-06-23 eklendi (sırayla, acele yok)
