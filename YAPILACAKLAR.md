@@ -11,6 +11,32 @@
 
 ---
 
+## 🎯 KODAK'a özel özellikler — 2026-07-01 (Google Form + niş araştırması)
+
+> Kitle: yeni grupta 100-150 seçili üye. Tarz: **sadece EUR/USD**, market yapısı + orderflow, günde 10-12 saat **canlı ekran paylaşımlı Discord**. Form: ücretli/şartlı üyelik (Tickmill hacim / BEM funded / 37.5 USDT), sesli görüşme onayı, günde 9 saat canlı takip, haftalık podcast, eğitim, challenge, 7/24 WhatsApp.
+> Amaç: 150 kişinin tamamının siteyi **günlük** kullanması + gerçek fayda görmesi.
+> **⚠️ Kullanıcı isteği: bu özellikleri kodladıktan sonra DOĞRUDAN PUSH ETME — önce kullanıcı kontrol eder, onaylayınca push.**
+
+### 🥇 Çekirdek — canlı DC ritmi (✅ #1+#2+#5 KODLANDI 2026-07-01)
+- [x] **1. 📺 Canlı Seans Odası / "Şu An Canlı"** ✅ — Trade sağ panel üstünde; admin "Seansı yönet" ile canlı/bias/not/Discord linki girer, üyeler kırmızı yanıp sönen "ŞU AN CANLI" görür. Supabase `live_session` (id=1) + RLS (herkes okur, admin/mod yazar). Test edildi, kalıcı.
+- [x] **2. 🧱 EUR/USD Seviye Panosu** ✅ — admin/mod seviye ekler (tür: günlük H/L, likidite, OB, FVG, Asia H/L, pivot + fiyat + not); renkli etiketli liste, herkes görür. Supabase `levels` + RLS. Test edildi.
+- [x] **5. 🎯 EUR/USD Odak Modu** ✅ — grafik üstü "🎯 EUR/USD Odak" butonu: grafiği EUR/USD'ye çeker, takvimi EUR+USD'ye daraltır, "Seans Saatleri" panelini açar (Asya/Londra/NY/overlap, o an açık olan yeşil, İstanbul saati). Durum localStorage'da hatırlanır. Frontend.
+
+### 🥈 Orderflow & yapı araçları
+- [ ] **3. 🔊 Seans Brifingi & Kapanış** — her seans açılış planı (bias/seviye/haber) + kapanış özeti (ne oldu, plan tuttu mu); kısa metin + opsiyonel ses/video linki. Podcast'in yapılandırılmış hali.
+- [ ] **4. 📐 Orderflow/Yapı Sözlüğü + anotasyonlu örnekler** — mevcut Veri Sözlüğü'ne orderflow katmanı: absorption, imbalance, likidite avı, CHoCH, BOS, OB, FVG, delta — KODAK'ın gerçek EUR/USD ekran görüntüleriyle.
+- [ ] **6. 📓 "Setup Tipi" (KODAK oyun kitabı)** — işlem günlüğüne metodolojiye özel setup etiketleri (Likidite avı+CHoCH, FVG dönüşü, Asia range kırılımı, OB reddi); İstatistik'te "hangi KODAK setup'ı kazandırıyor".
+
+### 🥉 Topluluk kalitesi & elde tutma
+- [ ] **7. ✅ Günlük Check-in & Katılım Serisi** — üye "bugün seansa katıldım" der, 🔥 seri birikir; admin panelinde aktif/pasif üye görünür (150 kişide elde tutma).
+- [ ] **8. 🏆 Hafta Kapanışı (topluluk karnesi)** — haftalık: en çok tutan setuplar, en aktif üyeler, en iyi analiz, topluluk EUR/USD isabet oranı. Cuma ritüeli + podcast içeriği.
+- [ ] **9. 🎓 Onboarding "İlk 7 Gün"** — yeni üye checklist'i (profil kur, odak modunu tanı, sözlüğü oku, ilk trade, ilk analiz) → "KODAK Üyesi" rozeti. İlk gün değer = kalma.
+- [ ] **10. 📊 Doğrulanmış Üye Rozeti (form ile entegre)** — Tickmill bağlı / BEM funded / KODAK üyesi rozetleri (admin onaylı); prop takipçisiyle birleşir. Güven + statü.
+
+**Seçilen sıra:** #1 → #2 → #5 (canlı seans + seviye panosu + odak modu = günlük çalışma masası).
+
+---
+
 ## 🚀 Büyüme Fikirleri — 2026-07-01 (araştırma temelli)
 
 > 2026 trader-uygulaması trendleri + DC/prop kitlemize göre önerildi. Kaynaklar: TradeZella, Edgewonk, TradesViz, Plancana, prop firma dokümanları.
