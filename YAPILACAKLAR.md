@@ -13,7 +13,7 @@
 - [x] **Ekonomik Takvim + Veri Sözlüğü → ayrı sekme** — Trade'in altında yeni "📅 Ekonomik Takvim" sekmesi; Trade sağ paneli sadeleşti (yalnız Canlı Seans + Seviye Panosu kaldı). DOM id'leri korundu → takvim/sözlük JS bozulmadı.
 - [x] **İşlem Günlüğüm (Notebook) TF listesi düzenlenebilir** — TF dropdown'ında "➕ Yeni TF ekle" + "✏️ TF listesini düzenle" (modal: ekle/sil). Kullanıcıya özel `fxdesk_nb_tfs` localStorage; özel TF'lere otomatik renk. Silme zaten vardı (Notebook 🗑 + Raporlar 🗑).
 - [x] **Grafik "Widget'lar" paneli varsayılan kapalı** — TradingView tek grafik `details:false` + `calendar:false` (grid zaten false'tu).
-- [ ] *(Bekleyen soru)* Raporlar elle işlem formuna da TF eklensin mi? (şu an TF yalnız Notebook'ta)
+- [x] ~~Raporlar formuna TF~~ — kullanıcı "gerek yok" dedi; TF yalnız Notebook'ta kalıyor.
 
 ---
 
