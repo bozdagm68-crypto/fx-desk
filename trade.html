@@ -1078,11 +1078,6 @@
   .rk-out .rk-muted{color:var(--muted)}
   .rk-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
 
-  .rh-bell{margin-left:8px;cursor:pointer;font-size:13px;user-select:none}
-  .rh-bell:hover{filter:brightness(1.2)}
-  #toast-wrap{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:600;max-width:320px}
-  .toast{background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--text);box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;transform:translateY(10px);transition:.3s}
-  .toast.show{opacity:1;transform:translateY(0)}
 
   #view-stats{flex-direction:column;overflow:auto}
   .st-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
@@ -1298,7 +1293,6 @@
       <div class="right-head">
         <h2>📅 Ekonomik Takvim</h2>
         <span class="sub" id="cal-status" title="Yenilemek için tıkla">yükleniyor…</span>
-        <span class="rh-bell" id="cal-bell" title="Haber alarmı aç/kapat">🔕</span>
         <span class="rh-chev" data-target="cal" title="Aç/Kapat">▾</span>
       </div>
       <div class="cal-next" id="cal-next" style="display:none"></div>
@@ -4629,49 +4623,9 @@ function riskCalc(){
   ['rk-bal','rk-risk','rk-entry','rk-stop','rk-contract'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',riskCalc);});
 })();
 
-/* ---- Haber alarmı ---- */
-let alarmOn=localStorage.getItem('fxdesk_alarm')==='on';
-const firedAlarms=new Set();
-function toast(msg){
-  let c=document.getElementById('toast-wrap'); if(!c){c=document.createElement('div');c.id='toast-wrap';document.body.appendChild(c);}
-  const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t);
-  setTimeout(()=>t.classList.add('show'),20);
-  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},6500);
-}
-function updateBell(){const b=document.getElementById('cal-bell'); if(b)b.textContent=alarmOn?'🔔':'🔕';}
-function fireNotif(title,body){ try{ if('Notification'in window && Notification.permission==='granted'){ new Notification(title,{body:body}); return; } }catch(e){} toast(title.replace('Kodak · ','')+' — '+body); }
-function nextHighEvent(){ if(typeof calEvents==='undefined')return null; const now=Date.now(); return calEvents.find(e=>e.impact==='High'&&e.date.getTime()>now)||null; }
-function alarmStatusMsg(){
-  const nx=nextHighEvent();
-  if(!nx)return 'Şu an yaklaşan yüksek etkili haber yok. Bir haber ~15 dk kala ve açıklandığı an seni uyaracağım.';
-  const diff=nx.date.getTime()-Date.now(), h=Math.floor(diff/3600e3), m=Math.max(1,Math.round(diff%3600e3/60e3));
-  const when=(h>0?h+' sa ':'')+m+' dk sonra';
-  return 'Sıradaki: '+(FLAG[nx.cur]||'')+' '+nx.cur+' · '+nx.title+' — '+when+' ('+fmtTime(nx.date)+'). ~15 dk kala ve açıklandığı an uyaracağım.';
-}
-function toggleAlarm(){
-  alarmOn=!alarmOn; localStorage.setItem('fxdesk_alarm',alarmOn?'on':'off'); updateBell();
-  if(!alarmOn){ toast('🔕 Haber alarmı kapatıldı.'); return; }
-  const finish=()=>{
-    const denied=('Notification'in window)&&Notification.permission==='denied';
-    toast('🔔 Haber alarmı açık. '+alarmStatusMsg()+(denied?' ⚠️ Tarayıcı bildirimleri kapalı — uyarılar yalnızca sayfa açıkken ekranda görünür.':' (Uyarı için sekme açık kalmalı.)'));
-    alarmCheck();
-  };
-  if('Notification'in window && Notification.permission==='default'){
-    try{ const r=Notification.requestPermission(); if(r&&r.then)r.then(finish); else finish(); }catch(e){ finish(); }
-  } else finish();
-}
-function alarmCheck(){
-  if(!alarmOn||typeof calEvents==='undefined'||!calEvents.length)return;
-  const now=Date.now();
-  calEvents.forEach(e=>{
-    if(e.impact!=='High')return;
-    const t=e.date.getTime(), diff=t-now, base=e.title+e.cur+t;
-    if(diff>0 && diff<=15*60000 && !firedAlarms.has(base+'_15')){ firedAlarms.add(base+'_15'); fireNotif('Kodak · Haber yaklaşıyor', (FLAG[e.cur]||'')+' '+e.cur+' · '+e.title+' — '+Math.max(1,Math.round(diff/60000))+' dk sonra ('+fmtTime(e.date)+')'); }
-    if(diff<=0 && diff>-120000 && !firedAlarms.has(base+'_0')){ firedAlarms.add(base+'_0'); fireNotif('Kodak · Haber çıktı', (FLAG[e.cur]||'')+' '+e.cur+' · '+e.title+' şimdi açıklanıyor!'); }
-  });
-}
-setInterval(alarmCheck,30000);
-(function(){const b=document.getElementById('cal-bell'); if(b)b.addEventListener('click',toggleAlarm); updateBell(); if(alarmOn)setTimeout(alarmCheck,2000);})();
+/* Eski tekil haber-alarmı sistemi kaldırıldı (2026-07-01). Yerini Ayarlar'daki
+   alCfg tabanlı sistem (checkAlarms/playAlarm/showAlarmToast + tek-olay 🔔 hatırlatma)
+   aldı. Böylece 'fxdesk_alarm' localStorage anahtarındaki format çakışması da giderildi. */
 
 /* ================= İSTATİSTİK ================= */
 let statsCharts={};

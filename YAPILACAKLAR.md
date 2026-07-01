@@ -62,8 +62,8 @@
 2. **#5 Haftanın Analizi** — backendsiz mi (istemci hesabı) yoksa kalıcı rozet mi (SQL) — sen seçeceksin.
 3. **#7 AI Koç** — Anthropic API + Edge Function proxy + maliyet kararı.
 
-### ⚠️ Teknik borç (uyanınca bir bakılmalı)
-- **İki alarm sistemi paralel duruyor:** eski (`alarmOn`/`fireNotif`/`cal-bell` id butonu, `fxdesk_alarm`='on'/'off') + yeni (Ayarlar'daki `alCfg`, `fxdesk_alarm`=JSON). İkisi aynı localStorage anahtarını farklı formatta kullanıyor. Pratikte çakışmıyor (yeni sistem kazanıyor) ama eskisini temizlemek gerek. Riskli olduğu için sen uyurken dokunmadım.
+### ✅ Teknik borç GİDERİLDİ (2026-07-01)
+- **İki alarm sistemi teke indirildi:** eski tekil sistem (`alarmOn`/`fireNotif`/`toggleAlarm`/`alarmCheck`/`toast` + topbar `#cal-bell` butonu + ölü `.rh-bell`/`.toast` CSS) tamamen kaldırıldı. Artık yalnızca Ayarlar'daki `alCfg` sistemi (`checkAlarms`/`playAlarm`/`showAlarmToast` + tek-olay 🔔 hatırlatma + SW bildirimi) var. `fxdesk_alarm` format çakışması çözüldü (eski 'on'/'off' değeri kalsa bile `loadAlarmCfg` try/catch ile güvenli). Konsol hatası: 0.
 
 ---
 
