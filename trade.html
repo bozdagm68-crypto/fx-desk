@@ -1017,7 +1017,12 @@
   #view-stats{flex-direction:column;overflow:auto}
   .st-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
   .st-head h2{font-size:19px;font-weight:700}
-  .st-prof{font-size:12px;color:var(--muted);margin-left:auto}
+  .st-prof{font-size:12px;color:var(--muted);margin-left:auto;display:flex;align-items:center;gap:7px}
+  .st-profsel{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:7px;font-size:13px;font-family:inherit;font-weight:600;outline:none;cursor:pointer}
+  .st-profsel:focus{border-color:var(--accent)}
+  .st-cmp-active{background:rgba(109,93,252,.10)}
+  .st-cmp-active td:first-child b{color:var(--accent)}
+  .st-cmp-active td:first-child b::after{content:" ● izleniyor";font-size:10px;color:var(--accent);font-weight:600}
   .st-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
   .st-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px}
   .st-card h3{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
@@ -1584,7 +1589,9 @@
   </section>
   <section id="view-stats" class="view" style="display:none">
     <div class="set-wrap" style="max-width:1000px">
-      <div class="st-head"><h2>📊 İstatistik</h2><span class="st-prof">Profil: <b id="st-profile">—</b></span></div>
+      <div class="st-head"><h2>📊 İstatistik</h2>
+        <div class="st-prof">Profil: <select id="st-profsel" class="st-profsel"></select></div>
+      </div>
       <div id="st-body"></div>
     </div>
   </section>
@@ -4316,15 +4323,43 @@ function stProfStats(pid){
   try{const a=JSON.parse(localStorage.getItem('fxdesk_journal_'+(currentUser?currentUser.id:'anon')+'_'+pid))||[];
     const t=a.map(x=>({...x,...calcTrade(x)})).filter(x=>x.pnl!=null);
     const n=t.length,w=t.filter(x=>x.result==='win').length,net=t.reduce((s,x)=>s+x.pnl,0);
-    return {n,net,wr:n?Math.round(w/n*100):0};
-  }catch(e){return {n:0,net:0,wr:0};}
+    // ort. RR
+    const rr=t.filter(x=>x.rr!=null); const avgRR=rr.length?rr.reduce((s,x)=>s+x.rr,0)/rr.length:null;
+    // profit factor = brüt kazanç / brüt kayıp
+    const gp=t.filter(x=>x.pnl>0).reduce((s,x)=>s+x.pnl,0);
+    const gl=Math.abs(t.filter(x=>x.pnl<0).reduce((s,x)=>s+x.pnl,0));
+    const pf=gl>0?gp/gl:(gp>0?Infinity:null);
+    // beklenti (işlem başı)
+    const exp=n?net/n:0;
+    // max drawdown (%) — başlangıç bakiyesinden akış
+    const prof=(typeof _profiles!=='undefined')?_profiles.find(p=>p.id===pid):null;
+    let bal=(prof&&+prof.startBalance)||0; if(!bal)bal=10000;
+    let peak=bal,maxDD=0;
+    [...t].sort((a2,b2)=>((a2.date||'').localeCompare(b2.date||''))||(a2.ts-b2.ts)).forEach(x=>{bal+=x.pnl;peak=Math.max(peak,bal);const dd=peak>0?(bal-peak)/peak*100:0;maxDD=Math.min(maxDD,dd);});
+    return {n,net,wr:n?Math.round(w/n*100):0,avgRR,pf,exp,maxDD};
+  }catch(e){return {n:0,net:0,wr:0,avgRR:null,pf:null,exp:0,maxDD:0};}
+}
+let stViewProfileId=null;   // İstatistik'te izlenen profil (null=aktif profil)
+function stTradesFor(pid){
+  // seçili profil aktifse global jrTrades'i kullan (en güncel), değilse localStorage'dan oku
+  if(pid===activeProfileId)return jrTrades.slice();
+  try{const a=JSON.parse(localStorage.getItem('fxdesk_journal_'+(currentUser?currentUser.id:'anon')+'_'+pid));return Array.isArray(a)?a:[];}catch(e){return [];}
+}
+function renderStatProfSel(){
+  const sel=document.getElementById('st-profsel'); if(!sel)return;
+  const cur=stViewProfileId||activeProfileId;
+  sel.innerHTML=_profiles.map(p=>`<option value="${p.id}" ${p.id===cur?'selected':''}>${esc(p.name)}</option>`).join('');
+  if(!sel._bound){sel._bound=true;sel.addEventListener('change',()=>{stViewProfileId=sel.value;renderStats();});}
 }
 function renderStats(){
   destroyStats();
-  const prof=getActiveProfile();
+  ensureProfiles();
+  if(!stViewProfileId||!_profiles.some(p=>p.id===stViewProfileId))stViewProfileId=activeProfileId;
+  renderStatProfSel();
+  const prof=_profiles.find(p=>p.id===stViewProfileId)||getActiveProfile();
   const pe=document.getElementById('st-profile'); if(pe)pe.textContent=prof?prof.name:'—';
   const body=document.getElementById('st-body'); if(!body)return;
-  const ts=jrTrades.map(t=>({...t,...calcTrade(t)})).filter(t=>t.pnl!=null);
+  const ts=stTradesFor(stViewProfileId).map(t=>({...t,...calcTrade(t)})).filter(t=>t.pnl!=null);
   if(!ts.length){body.innerHTML='<div class="st-empty">Bu profilde işlem yok. Raporlar sekmesinden rapor yükle ya da işlem ekle.</div>';return;}
   const f$=v=>(v>=0?'+':'')+Math.round(v).toLocaleString('tr-TR')+' $';
   const byDate=[...ts].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.ts-b.ts);
@@ -4348,8 +4383,9 @@ function renderStats(){
   const rrTs=ts.filter(t=>t.rr!=null);
   const buckets=['<-2','-2/-1','-1/0','0/1','1/2','2/3','>3']; const bc=[0,0,0,0,0,0,0];
   rrTs.forEach(t=>{const r=t.rr;let i; if(r<-2)i=0;else if(r<-1)i=1;else if(r<0)i=2;else if(r<1)i=3;else if(r<2)i=4;else if(r<3)i=5;else i=6;bc[i]++;});
-  // drawdown
-  let bal=jrBal(),peak=bal; const ddArr=byDate.map(t=>{bal+=t.pnl;peak=Math.max(peak,bal);return +(peak>0?(bal-peak)/peak*100:0).toFixed(2);});
+  // drawdown (izlenen profilin başlangıç bakiyesinden)
+  let startBal=(prof&&+prof.startBalance)||0; if(!startBal)startBal=(stViewProfileId===activeProfileId?jrBal():10000);
+  let bal=startBal,peak=bal; const ddArr=byDate.map(t=>{bal+=t.pnl;peak=Math.max(peak,bal);return +(peak>0?(bal-peak)/peak*100:0).toFixed(2);});
   // parite
   const pAgg={}; ts.forEach(t=>{const k=t.pair||'—';const o=pAgg[k]||(pAgg[k]={n:0,w:0,net:0,rs:0,rc:0});o.n++;if(t.result==='win')o.w++;o.net+=t.pnl;if(t.rr!=null){o.rs+=t.rr;o.rc++;}});
   // aylık
@@ -4373,8 +4409,14 @@ function renderStats(){
   // aylık tablo
   const mk=Object.keys(mAgg).sort();
   h+=card('🗓 Aylık Performans','<div class="st-tw"><table class="jr-table"><thead><tr><th>Ay</th><th>İşlem</th><th>Kazanç %</th><th>Net</th></tr></thead><tbody>'+mk.map(k=>{const o=mAgg[k];return '<tr><td>'+k+'</td><td>'+o.n+'</td><td>%'+Math.round(o.w/o.n*100)+'</td><td class="'+cls(o.net)+'">'+f$(o.net)+'</td></tr>';}).join('')+'</tbody></table></div>');
-  // profil karşılaştırma
-  h+=card('📂 Profil Karşılaştırma','<div class="st-tw"><table class="jr-table"><thead><tr><th>Profil</th><th>İşlem</th><th>Kazanç %</th><th>Net</th></tr></thead><tbody>'+_profiles.map(p=>{const o=stProfStats(p.id);return '<tr><td><b>'+esc(p.name)+'</b></td><td>'+o.n+'</td><td>%'+o.wr+'</td><td class="'+cls(o.net)+'">'+f$(o.net)+'</td></tr>';}).join('')+'</tbody></table></div>');
+  // profil karşılaştırma (kendi profillerin — zengin metrikler, izlenen profil vurgulu)
+  const pf$=v=>v==null?'-':(v===Infinity?'∞':v.toFixed(2));
+  const cmpRows=_profiles.map(p=>{
+    const o=stProfStats(p.id);
+    const act=p.id===stViewProfileId?' class="st-cmp-active"':'';
+    return '<tr'+act+'><td><b>'+esc(p.name)+'</b></td><td>'+o.n+'</td><td>%'+o.wr+'</td><td>'+(o.avgRR!=null?fmtR(o.avgRR):'-')+'</td><td>'+pf$(o.pf)+'</td><td class="'+cls(o.exp)+'">'+f$(o.exp)+'</td><td class="neg">%'+o.maxDD.toFixed(1)+'</td><td class="'+cls(o.net)+'">'+f$(o.net)+'</td></tr>';
+  }).join('');
+  h+=card('📂 Profil Karşılaştırma <small style="font-weight:400;color:var(--muted)">· tüm hesap profillerin yan yana</small>','<div class="st-tw"><table class="jr-table"><thead><tr><th>Profil</th><th>İşlem</th><th>Kazanç %</th><th>Ort. RR</th><th>PF</th><th>Beklenti</th><th>Max DD</th><th>Net</th></tr></thead><tbody>'+cmpRows+'</tbody></table></div>');
   // topluluk
   h+=card('📣 Topluluk','<div class="st-comm">Toplam paylaşım: <b>'+(typeof feed!=='undefined'?feed.length:0)+'</b><br>En çok paylaşılan pariteler:<br>'+(cTop.length?cTop.map(x=>esc(x[0])+' ('+x[1]+')').join(' · '):'—')+'</div>');
   body.innerHTML=h;
