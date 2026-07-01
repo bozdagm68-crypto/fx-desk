@@ -1620,7 +1620,7 @@
      ÖNEMLİ: true yapmadan ÖNCE SUPABASE_KURULUM.md'deki "Gated access" SQL'ini çalıştır
      (profiles.approved kolonu + RPC güncellemeleri). Kolon yoksa sistem güvenli şekilde
      açık kalır (kimse kilitlenmez), bayrak true olsa bile. */
-  const GATED_ACCESS = false;
+  const GATED_ACCESS = true;
   const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
   const DEMO = !sb;

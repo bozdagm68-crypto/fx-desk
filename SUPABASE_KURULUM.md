@@ -312,9 +312,14 @@ Yeni kayıtların **yalnızca sen onayladıktan sonra** girebilmesi için. Sıra
 **1. Aşağıdaki SQL'i Supabase → SQL Editor'de çalıştır** (bir kez):
 
 ```sql
--- 1) approved kolonu — mevcut herkes onaylı sayılır, yeni kayıtlar onaysız gelir
+-- 1) approved kolonu. default false → bundan sonra kayıt olan herkes onaysız gelir.
 alter table profiles add column if not exists approved boolean not null default false;
-update profiles set approved = true;   -- şu anki tüm kullanıcıları onayla (bir kez)
+-- Aşağıdaki satırlardan BİRİNİ seç:
+--   (a) Yumuşak geçiş: mevcut herkes onaylı kalsın, sadece yeni kayıtlar onay beklesin
+-- update profiles set approved = true;
+--   (b) SIKI geçiş (DC'ye özel lansman): HERKESİ kilitle, tek tek sen onayla; adminler hariç
+update profiles set approved = false;
+update profiles set approved = true where is_admin = true;
 
 -- 2) admin_list_users: approved alanını da döndür (dönen tip değişti → düşür+oluştur)
 drop function if exists admin_list_users();
