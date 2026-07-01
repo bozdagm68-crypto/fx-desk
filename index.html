@@ -362,6 +362,23 @@
   .vote.neutral .vbar{background:var(--gold)}
   .vcount{font-variant-numeric:tabular-nums;opacity:.85;font-size:11.5px}
 
+  /* sonuç takibi */
+  .c-tp{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+  .c-tp-lbl{font-size:12px;color:var(--muted);font-weight:600}
+  .c-tp-in{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:7px;font-size:12.5px;font-family:inherit;outline:none;width:130px}
+  .c-tp-in:focus{border-color:var(--accent)}
+  .oc-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap}
+  .oc-badge.hit{background:rgba(38,166,154,.18);color:var(--green);border:1px solid rgba(38,166,154,.4)}
+  .oc-badge.miss{background:rgba(239,83,80,.16);color:var(--red);border:1px solid rgba(239,83,80,.4)}
+  .oc-badge.open{background:rgba(245,158,11,.14);color:var(--gold);border:1px solid rgba(245,158,11,.4)}
+  .post-tp{font-size:12px;color:var(--muted);margin:8px 0 2px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:6px 11px;display:inline-block}
+  .post-tp b{color:var(--text)}
+  .post-outcome{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+  .oc-btn{background:var(--panel-2);border:1px solid var(--border);color:var(--muted);padding:5px 11px;border-radius:14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.12s}
+  .oc-btn:hover{border-color:var(--accent);color:var(--text)}
+  .oc-btn.oc-hit.on{background:rgba(38,166,154,.18);border-color:var(--green);color:var(--green)}
+  .oc-btn.oc-miss.on{background:rgba(239,83,80,.16);border-color:var(--red);color:var(--red)}
+  .oc-btn.oc-open.on{background:rgba(245,158,11,.14);border-color:var(--gold);color:var(--gold)}
   .post-actions{display:flex;align-items:center;gap:14px;margin-top:11px}
   .cm-toggle{color:var(--muted);font-size:12px;cursor:pointer;display:inline-block}
   .cm-toggle:hover{color:var(--text)}
@@ -1075,6 +1092,9 @@
   .st-rec span{color:var(--muted)}
   .st-tw{overflow:auto}
   .st-comm{font-size:13px;line-height:1.8;color:var(--text)}
+  .st-hitrate{display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+  .st-hr-big{font-size:34px;font-weight:800;letter-spacing:-1px}
+  .st-hr-lbl{font-size:13px;color:var(--muted);line-height:1.4}
   .st-tagpill{display:inline-block;padding:3px 10px;border-radius:14px;font-size:12px;font-weight:600;background:var(--panel-2);border:1px solid var(--border)}
   .st-tagpill.bad{background:rgba(239,83,80,.14);border-color:rgba(239,83,80,.4);color:var(--red)}
   .st-tagpill.good{background:rgba(38,166,154,.16);border-color:rgba(38,166,154,.4);color:var(--green)}
@@ -1331,6 +1351,11 @@
           <input id="c-sym" class="sp-other" placeholder="diğer..." autocomplete="off" />
         </div>
         <textarea id="c-text" class="c-area" placeholder="Analizini / bias'ını yaz... (örn. EUR/USD 1.0820 desteğinden 1.0910'a kadar yükseliş bekliyorum)"></textarea>
+        <div class="c-tp" title="Opsiyonel: hedef ve stop girersen, sonradan 'tuttu mu' işaretleyebilir ve isabet oranın birikir">
+          <span class="c-tp-lbl">🎯 Sonuç takibi (opsiyonel):</span>
+          <input id="c-target" class="c-tp-in" placeholder="Hedef fiyat" autocomplete="off">
+          <input id="c-stop" class="c-tp-in" placeholder="Stop fiyat" autocomplete="off">
+        </div>
         <div class="compose-foot">
           <label class="upload">📎 Ekran görüntüsü ekle (3'e kadar)
             <input type="file" id="c-img" accept="image/*" multiple hidden />
@@ -2535,6 +2560,23 @@ function renderSentiment(){
   box.style.display='block';
   box.innerHTML='<div class="senti-head">📊 Topluluk Sentimenti <span class="senti-sub">(paylaşımlara göre)</span></div><div class="senti-grid">'+arr.map(x=>{const lp=Math.round(x.l/x.t*100);return '<div class="senti-item"><div class="senti-top"><b>'+esc(x.sym)+'</b><span>'+x.t+' paylaşım</span></div><div class="senti-bar"><div class="senti-l" style="width:'+lp+'%"></div></div><div class="senti-lbl"><span class="pos">Long %'+lp+'</span><span class="neg">Short %'+(100-lp)+'</span></div></div>';}).join('')+'</div>';
 }
+function outcomeBadge(p){
+  if(p.outcome==='hit')return '<span class="oc-badge hit">✅ Hedef tuttu</span>';
+  if(p.outcome==='miss')return '<span class="oc-badge miss">❌ Stop oldu</span>';
+  if(p.outcome==='open'||(p.target&&!p.outcome))return '<span class="oc-badge open">⏳ Devam ediyor</span>';
+  return '';
+}
+async function setOutcome(id,oc){
+  const p=feed.find(x=>x.id===id); if(!p)return;
+  if(!currentUser||p.uid!==currentUser.id)return;   // yalnız sahibi
+  const prev=p.outcome; p.outcome=oc;               // iyimser güncelle
+  if(!DEMO){
+    let error=null;
+    try{const r=await sb.from('posts').update({outcome:oc}).eq('id',id);error=r.error;}catch(e){error=e;}
+    if(error){p.outcome=prev;alert('Sonuç kaydedilemedi: '+(error.message||error));return;}
+  }else saveFeed();
+  renderFeed();
+}
 function renderFeed(){
   renderSentiment();
   renderSymFilter();
@@ -2560,8 +2602,10 @@ function renderFeed(){
         <div class="post-tags">
           <span class="chip-sym">${esc(p.symbol)}</span>
           <span class="bias ${p.bias}">${biasLabel(p.bias)}</span>
+          ${outcomeBadge(p)}
         </div>
       </div>
+      ${(p.target||p.stop)?`<div class="post-tp">${p.target?`🎯 Hedef: <b>${esc(p.target)}</b>`:''}${p.stop?`${p.target?' · ':''}🛑 Stop: <b>${esc(p.stop)}</b>`:''}</div>`:''}
       ${p.text?`<div class="post-text">${esc(p.text)}</div>`:''}
       ${(()=>{const ims=postImgs(p);if(!ims.length)return '';if(ims.length===1)return `<img class="post-img" src="${ims[0]}" alt="setup">`;return `<div class="post-gallery g${ims.length}">`+ims.map(s=>`<img class="post-img" src="${s}" alt="setup">`).join('')+`</div>`;})()}
       <div class="votes">
@@ -2576,11 +2620,17 @@ function renderFeed(){
         ${canEdit?`<span class="edit-btn" title="Paylaşımını düzenle">✏️ Düzenle</span>`:''}
         ${canDel?`<span class="del-btn" title="${currentUser.isAdmin?'Yönetici: paylaşımı sil':'Paylaşımını sil'}">🗑 Sil</span>`:''}
       </div>
+      ${(canEdit&&(p.target||p.outcome))?`<div class="post-outcome">Sonucu işaretle:
+        <button class="oc-btn oc-hit${p.outcome==='hit'?' on':''}" data-oc="hit">✅ Tuttu</button>
+        <button class="oc-btn oc-miss${p.outcome==='miss'?' on':''}" data-oc="miss">❌ Tutmadı</button>
+        <button class="oc-btn oc-open${p.outcome==='open'||!p.outcome?' on':''}" data-oc="open">⏳ Devam</button>
+      </div>`:''}
       <div class="comments ${openComments.has(p.id)?'open':''}">
         ${p.comments.map((c,ci)=>{const ownC=currentUser&&c.uid&&c.uid===currentUser.id;const canDelC=currentUser&&(ownC||currentUser.isAdmin);return `<div class="comment" data-ci="${ci}">${avatarBox(c.uid,c.name,'avatar')}<div class="cm-body"><div class="cmname">${esc(c.name)} <span style="color:var(--muted);font-weight:400;font-size:11px">· ${timeAgo(c.ts)}${c.edited?' · <span class="edited-tag">düzenlendi</span>':''}</span>${(ownC||canDelC)?`<span class="cm-acts">${ownC?'<b class="cm-edit" title="Düzenle">✏️</b>':''}${canDelC?'<b class="cm-del" title="Sil">🗑</b>':''}</span>`:''}</div><div class="cmtext">${esc(c.text)}</div></div></div>`;}).join('')}
         <div class="cm-add"><input placeholder="Yorum yaz..." /><button>Gönder</button></div>
       </div>`;
     card.querySelectorAll('.vote').forEach(btn=>btn.addEventListener('click',()=>vote(p.id,btn.dataset.v)));
+    card.querySelectorAll('.oc-btn').forEach(btn=>btn.addEventListener('click',()=>setOutcome(p.id,btn.dataset.oc)));
     card.querySelectorAll('.post-img').forEach(im=>im.addEventListener('click',()=>openLightbox(im.getAttribute('src'))));
     const tg=card.querySelector('.cm-toggle'), cm=card.querySelector('.comments');
     tg.addEventListener('click',()=>{openComments.has(p.id)?openComments.delete(p.id):openComments.add(p.id);cm.classList.toggle('open');});
@@ -2736,8 +2786,11 @@ document.getElementById('c-post').addEventListener('click',()=>{
   if(!currentUser){showGate();return;}
   const sym=document.getElementById('c-sym').value.trim()||composeSym;
   const text=document.getElementById('c-text').value.trim();
+  const target=(document.getElementById('c-target').value||'').trim();
+  const stop=(document.getElementById('c-stop').value||'').trim();
+  const outcome=target?'open':null;   // hedef girildiyse "devam ediyor" olarak başlar
   if(!sym&&!text&&!composeImgs.length){alert('Lütfen en az bir parite, analiz yazısı veya görsel ekle.');return;}
-  const resetCompose=()=>{document.getElementById('c-sym').value='';document.getElementById('c-text').value='';composeSym='';document.querySelectorAll('.spx').forEach(x=>x.classList.remove('sel'));clearComposeImgs();feedFilter='all';feedSym='all';document.querySelectorAll('.ff').forEach(x=>x.classList.toggle('active',x.dataset.f==='all'));};
+  const resetCompose=()=>{document.getElementById('c-sym').value='';document.getElementById('c-text').value='';document.getElementById('c-target').value='';document.getElementById('c-stop').value='';composeSym='';document.querySelectorAll('.spx').forEach(x=>x.classList.remove('sel'));clearComposeImgs();feedFilter='all';feedSym='all';document.querySelectorAll('.ff').forEach(x=>x.classList.toggle('active',x.dataset.f==='all'));};
   if(!DEMO){
     (async()=>{
       let img_url=null;
@@ -2745,12 +2798,18 @@ document.getElementById('c-post').addEventListener('click',()=>{
         const urls=[]; for(const d of composeImgs){const u=await uploadShot(d); if(u)urls.push(u);}
         img_url = urls.length>1?JSON.stringify(urls):(urls[0]||null);
       }
-      try{const {error}=await sb.from('posts').insert({user_id:currentUser.id,username:currentUser.username,symbol:sym||'—',bias:composeBias,text,img_url});if(error)throw error;}
-      catch(e){console.warn(e);alert('Paylaşım kaydedilemedi: '+(e.message||e));return;}
+      const row={user_id:currentUser.id,username:currentUser.username,symbol:sym||'—',bias:composeBias,text,img_url,target:target||null,stop:stop||null,outcome};
+      let error=null;
+      try{const r=await sb.from('posts').insert(row);error=r.error;}catch(e){error=e;}
+      // fail-safe: outcome kolonları yoksa (migration atlanmış) onlarsız tekrar dene
+      if(error&&/target|stop|outcome|column/i.test(error.message||'')){
+        try{const r2=await sb.from('posts').insert({user_id:currentUser.id,username:currentUser.username,symbol:sym||'—',bias:composeBias,text,img_url});error=r2.error;}catch(e){error=e;}
+      }
+      if(error){console.warn(error);alert('Paylaşım kaydedilemedi: '+(error.message||error));return;}
       resetCompose();await refreshFeed(); })();
     return;
   }
-  feed.push({id:'p'+Date.now(),uid:currentUser.id,name:currentUser.username,symbol:sym||'—',bias:composeBias,text,imgs:composeImgs.slice(),ts:Date.now(),votes:{agree:0,disagree:0,neutral:0},comments:[]});
+  feed.push({id:'p'+Date.now(),uid:currentUser.id,name:currentUser.username,symbol:sym||'—',bias:composeBias,text,imgs:composeImgs.slice(),target:target||null,stop:stop||null,outcome,ts:Date.now(),votes:{agree:0,disagree:0,neutral:0},comments:[]});
   saveFeed(); resetCompose(); renderFeed();
 });
 document.querySelectorAll('.ff').forEach(b=>b.addEventListener('click',()=>{
@@ -3842,7 +3901,7 @@ async function sbLoadFeed(){
     const vb={}; (votes||[]).forEach(v=>{const o=vb[v.post_id]||(vb[v.post_id]={agree:0,disagree:0,neutral:0});if(o[v.choice]!=null)o[v.choice]++;});
     const vl={}; (votes||[]).forEach(v=>{(vl[v.post_id]||(vl[v.post_id]=[])).push({uid:v.user_id,name:pmap[v.user_id]||'Kullanıcı',choice:v.choice});});
     const cb={}; (comments||[]).forEach(c=>{(cb[c.post_id]||(cb[c.post_id]=[])).push({id:c.id,uid:c.user_id,name:c.username,text:c.text,edited:!!c.edited,ts:new Date(c.created_at).getTime()});});
-    feed=(posts||[]).map(p=>({id:p.id,uid:p.user_id,name:p.username,symbol:p.symbol,bias:p.bias,text:p.text,edited:!!p.edited,imgs:parseImgUrl(p.img_url),ts:new Date(p.created_at).getTime(),votes:vb[p.id]||{agree:0,disagree:0,neutral:0},voters:vl[p.id]||[],comments:cb[p.id]||[]}));
+    feed=(posts||[]).map(p=>({id:p.id,uid:p.user_id,name:p.username,symbol:p.symbol,bias:p.bias,text:p.text,edited:!!p.edited,imgs:parseImgUrl(p.img_url),target:p.target||null,stop:p.stop||null,outcome:p.outcome||null,ts:new Date(p.created_at).getTime(),votes:vb[p.id]||{agree:0,disagree:0,neutral:0},voters:vl[p.id]||[],comments:cb[p.id]||[]}));
     myVotes={}; if(currentUser)(votes||[]).forEach(v=>{if(v.user_id===currentUser.id)myVotes[v.post_id]=v.choice;});
     return true;
   }catch(e){console.warn('sbLoadFeed',e);return false;}
@@ -4743,8 +4802,22 @@ function renderStats(){
     return '<tr'+act+'><td><b>'+esc(p.name)+'</b></td><td>'+o.n+'</td><td>%'+o.wr+'</td><td>'+(o.avgRR!=null?fmtR(o.avgRR):'-')+'</td><td>'+pf$(o.pf)+'</td><td class="'+cls(o.exp)+'">'+f$(o.exp)+'</td><td class="neg">%'+o.maxDD.toFixed(1)+'</td><td class="'+cls(o.net)+'">'+f$(o.net)+'</td></tr>';
   }).join('');
   h+=card('📂 Profil Karşılaştırma <small style="font-weight:400;color:var(--muted)">· tüm hesap profillerin yan yana</small>','<div class="st-tw"><table class="jr-table"><thead><tr><th>Profil</th><th>İşlem</th><th>Kazanç %</th><th>Ort. RR</th><th>PF</th><th>Beklenti</th><th>Max DD</th><th>Net</th></tr></thead><tbody>'+cmpRows+'</tbody></table></div>');
-  // topluluk
-  h+=card('📣 Topluluk','<div class="st-comm">Toplam paylaşım: <b>'+(typeof feed!=='undefined'?feed.length:0)+'</b><br>En çok paylaşılan pariteler:<br>'+(cTop.length?cTop.map(x=>esc(x[0])+' ('+x[1]+')').join(' · '):'—')+'</div>');
+  // topluluk + paylaşım isabet oranı (kendi paylaşımların)
+  let hitStr='';
+  if(typeof feed!=='undefined'&&currentUser){
+    const mine=feed.filter(p=>p.uid===currentUser.id&&(p.outcome==='hit'||p.outcome==='miss'));
+    const hits=mine.filter(p=>p.outcome==='hit').length;
+    const openN=feed.filter(p=>p.uid===currentUser.id&&p.outcome==='open').length;
+    if(mine.length){
+      const rate=Math.round(hits/mine.length*100);
+      hitStr='<div class="st-hitrate"><span class="st-hr-big '+(rate>=50?'pos':'neg')+'">%'+rate+'</span><span class="st-hr-lbl">paylaşım isabet oranı<br><small>'+hits+'/'+mine.length+' tuttu'+(openN?' · '+openN+' devam ediyor':'')+'</small></span></div>';
+    } else if(openN){
+      hitStr='<div class="st-comm" style="margin-bottom:10px">📌 '+openN+' paylaşımın sonucu bekleniyor. Kapandıkça "Tuttu/Tutmadı" işaretle → isabet oranın burada birikir.</div>';
+    } else {
+      hitStr='<div class="st-comm" style="margin-bottom:10px">💡 Paylaşırken hedef/stop girip sonucu işaretlersen, isabet oranın burada birikir.</div>';
+    }
+  }
+  h+=card('📣 Topluluk',hitStr+'<div class="st-comm">Toplam paylaşım: <b>'+(typeof feed!=='undefined'?feed.length:0)+'</b><br>En çok paylaşılan pariteler:<br>'+(cTop.length?cTop.map(x=>esc(x[0])+' ('+x[1]+')').join(' · '):'—')+'</div>');
   body.innerHTML=h;
 
   // grafikler

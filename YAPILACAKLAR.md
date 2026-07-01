@@ -42,10 +42,7 @@
 
 ### 🥈 Kademe 2 — Topluluğu (DC modelini) güçlendirir
 
-- [ ] **4. Sonuç Takipli Paylaşım (accountability / şeffaflık)** ⏸️ **SENİN KARARIN + SQL GEREKİYOR**
-  - Setup paylaşınca opsiyonel **hedef & stop** gir. Kapandığında paylaşan **"✅ Tuttu / ❌ Tutmadı / ⏳ Devam"** işaretler.
-  - Profilde **"paylaşım isabet oranı"** birikir (örn. 12/18 tuttu · %67).
-  - **Neden yarım bırakıldı:** `posts` tablosuna yeni kolonlar gerekiyor (`target`, `stop`, `outcome`) → Supabase'de SQL + RLS. Sen uyurken backend şemasına dokunmadım (temkin). Uyanınca: SQL'i hazırlarım, MCP ile çalıştırırız, sonra kodlarım. Fail-safe yaparım (kolon yoksa özellik gizli kalır).
+- [x] **4. Sonuç Takipli Paylaşım (accountability / şeffaflık)** ✅ KODLANDI (2026-07-01) — `posts` tablosuna `target`/`stop`/`outcome` kolonları eklendi (MCP migration, onaylı). Composer'da opsiyonel hedef/stop; kartta sonuç rozeti (⏳ Devam / ✅ Tuttu / ❌ Stop) + sahibi için "Tuttu/Tutmadı/Devam" butonları (RLS `upd_post` ile yalnız sahibi); İstatistik → Topluluk kartında **paylaşım isabet oranı** (%X · hits/total). Insert fail-safe (kolon yoksa onlarsız çalışır).
 
 - [ ] **5. Haftalık "Setup Yarışı" / Haftanın Analizi** ⏸️ **#4'e bağlı / topluluk verisi**
   - Paylaşımlar zaten oy alıyor. Hafta sonunda en çok oylanan setup **"🏆 Haftanın Analizi"** rozetiyle sabitlenir.
