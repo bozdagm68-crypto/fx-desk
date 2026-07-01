@@ -1038,6 +1038,14 @@
   .st-comm{font-size:13px;line-height:1.8;color:var(--text)}
   .st-card .pos{color:var(--green)} .st-card .neg{color:var(--red)}
   @media(max-width:760px){.st-grid2{grid-template-columns:1fr}.st-ls{grid-template-columns:1fr}}
+  /* mobil: ayar satirlari dar ekranda alt alta sarsin; alarm kontrolleri sigsin */
+  @media(max-width:560px){
+    .set-row{flex-wrap:wrap;align-items:flex-start}
+    .set-row>.set-inline,.set-row>.al-when{width:100%}
+    .set-row .st-profsel,.set-row select{max-width:100%}
+    #al-sound{flex:1;min-width:0}
+    .st-prof{margin-left:0}
+  }
 
   /* ===== Cyber Neon: cam paneller + neon vurgular (görsel katman) ===== */
   .right{
