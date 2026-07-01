@@ -199,6 +199,9 @@
   .imp-bars{display:inline-flex;gap:2px;align-items:center;flex-shrink:0}
   .imp-bars i{width:3px;height:11px;border-radius:1px;display:inline-block}
   .cal-title{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cal-bell{flex-shrink:0;background:none;border:none;cursor:pointer;font-size:13px;line-height:1;padding:3px;border-radius:6px;filter:grayscale(1) opacity(.45);transition:.13s}
+  .cal-bell:hover{filter:grayscale(.3) opacity(.9);background:var(--panel-2)}
+  .cal-bell.on{filter:none;opacity:1;background:rgba(245,158,11,.14)}
   .cal-r2{margin-left:50px;margin-top:4px;display:flex;gap:14px;font-size:11px;color:var(--muted)}
   .cal-r2 b{color:var(--text);font-weight:600}
   .cal-empty{padding:30px 16px;text-align:center;color:var(--muted);font-size:12.5px}
@@ -495,6 +498,11 @@
   .jr-emo{display:flex;gap:5px}
   .jr-emo button{flex:1;background:var(--panel-2);border:1px solid var(--border);font-size:18px;padding:6px;border-radius:7px;cursor:pointer}
   .jr-emo button.sel{border-color:var(--accent);background:rgba(109,93,252,.12)}
+  .jr-tags{display:flex;flex-wrap:wrap;gap:6px}
+  .jr-tags button{background:var(--panel-2);border:1px solid var(--border);color:var(--muted);padding:6px 10px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.12s}
+  .jr-tags button:hover{border-color:var(--accent)}
+  .jr-tags button.sel{background:rgba(239,83,80,.16);border-color:var(--red);color:var(--red)}
+  .jr-tags button.pos.sel{background:rgba(38,166,154,.18);border-color:var(--green);color:var(--green)}
   .jr-calc{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px}
   .jr-calc .muted{color:var(--muted)} .jr-calc .pos{color:var(--green)} .jr-calc .neg{color:var(--red)}
   .jr-share{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
@@ -1036,6 +1044,17 @@
   .st-rec span{color:var(--muted)}
   .st-tw{overflow:auto}
   .st-comm{font-size:13px;line-height:1.8;color:var(--text)}
+  .st-tagpill{display:inline-block;padding:3px 10px;border-radius:14px;font-size:12px;font-weight:600;background:var(--panel-2);border:1px solid var(--border)}
+  .st-tagpill.bad{background:rgba(239,83,80,.14);border-color:rgba(239,83,80,.4);color:var(--red)}
+  .st-tagpill.good{background:rgba(38,166,154,.16);border-color:rgba(38,166,154,.4);color:var(--green)}
+  .st-insight{background:var(--panel-2);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:8px;padding:9px 12px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
+  .st-disc{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .st-disc-big{font-size:38px;font-weight:800;letter-spacing:-1px}
+  .st-disc-big small{font-size:15px;font-weight:600;color:var(--muted)}
+  .st-disc-meta{display:flex;flex-direction:column;gap:5px;font-size:13px;flex:1;min-width:180px}
+  .st-disc-meta div{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:3px 0}
+  .st-disc-meta span{color:var(--muted)}
+  .st-disc-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5}
   .st-card .pos{color:var(--green)} .st-card .neg{color:var(--red)}
   @media(max-width:760px){.st-grid2{grid-template-columns:1fr}.st-ls{grid-template-columns:1fr}}
   /* mobil: ayar satirlari dar ekranda alt alta sarsin; alarm kontrolleri sigsin */
@@ -1434,6 +1453,17 @@
           <div class="jr-f full"><label>RR &amp; P&amp;L (otomatik)</label><div class="jr-calc" id="j-calc"></div></div>
           <div class="jr-f"><label>Duygu durumu</label><div class="jr-emo" id="j-emotion"><button type="button" data-e="1">😰</button><button type="button" data-e="2">🙁</button><button type="button" data-e="3">😐</button><button type="button" data-e="4">🙂</button><button type="button" data-e="5">😎</button></div></div>
           <div class="jr-f"><label>Plana uydun mu?</label><div class="jr-btns2" id="j-plan"><button type="button" data-p="yes">✅ Evet</button><button type="button" data-p="no">⚠️ Hayır</button></div></div>
+          <div class="jr-f full"><label>Davranış etiketleri <small style="color:var(--muted);font-weight:400">· birden çok seçebilirsin</small></label><div class="jr-tags" id="j-tags">
+            <button type="button" data-t="plana-sadik" class="pos">✔ Plana sadık</button>
+            <button type="button" data-t="fomo">FOMO</button>
+            <button type="button" data-t="revenge">Revenge</button>
+            <button type="button" data-t="overtrade">Aşırı işlem</button>
+            <button type="button" data-t="erken-cikis">Erken çıkış</button>
+            <button type="button" data-t="gec-giris">Geç giriş</button>
+            <button type="button" data-t="asiri-lot">Aşırı lot</button>
+            <button type="button" data-t="tereddut">Tereddüt</button>
+            <button type="button" data-t="plan-disi">Plan dışı</button>
+          </div></div>
           <div class="jr-f full"><label>Not / Ders</label><textarea id="j-notes" rows="2" placeholder="Bu işlemden çıkarımın..."></textarea></div>
           <div class="jr-f full"><label>Ekran görüntüsü (opsiyonel)</label><input type="file" id="j-img" accept="image/*"><div class="jr-img-prev" id="j-img-prev"></div></div>
           <div class="jr-f full"><label class="jr-share"><input type="checkbox" id="j-share"> Bu işlemi Paylaşımlar sekmesine de gönder</label></div>
@@ -1968,16 +1998,29 @@ function renderCalendar(){
     row.className='cal-row'+(past?' past':'')+(soon?' soon':'');
     const f=e.forecast?`Beklenti: <b>${e.forecast}</b>`:'';
     const p=e.previous?`Önceki: <b>${e.previous}</b>`:'';
+    const rk=evtKey(e);
+    const bell=past?'':`<button class="cal-bell${calReminders.has(rk)?' on':''}" data-bell="${rk}" title="Bu haber için bana hatırlat (yaklaşınca sesli uyarı)">🔔</button>`;
     row.innerHTML=`
       <div class="cal-r1">
         <span class="cal-time">${fmtTime(e.date)}</span>
         <span class="cal-cur-badge">${FLAG[e.cur]||''} ${e.cur}</span>
         ${impBars(e.impact)}
         <span class="cal-title">${e.title}</span>
+        ${bell}
       </div>
       ${(f||p)?`<div class="cal-r2">${f}${p}</div>`:''}`;
     list.appendChild(row);
   });
+  list.querySelectorAll('[data-bell]').forEach(b=>b.addEventListener('click',()=>toggleReminder(b.dataset.bell)));
+}
+/* tek-olay hatırlatma anahtarı (dataset-güvenli) */
+function evtKey(e){return e.date.getTime()+'|'+e.cur+'|'+(e.title||'').replace(/[^a-zA-Z0-9]/g,'').slice(0,24);}
+let calReminders=(function(){try{return new Set(JSON.parse(localStorage.getItem('fxdesk_cal_reminders')||'[]'));}catch(e){return new Set();}})();
+function saveReminders(){try{localStorage.setItem('fxdesk_cal_reminders',JSON.stringify([...calReminders]));}catch(e){}}
+function toggleReminder(k){
+  if(calReminders.has(k)){calReminders.delete(k);}
+  else{calReminders.add(k); if(typeof alCtx==='function')alCtx();}   // ilk tıkta ses iznini uyandır
+  saveReminders(); renderCalendar();
 }
 
 /* sıradaki haber geri sayımı */
@@ -2039,35 +2082,37 @@ function playAlarm(){
   }
   playTone(AL_PRESETS[alCfg.sound]||AL_PRESETS.beep,vol);
 }
-/* tickCalendar her saniye çağırır: yaklaşan high-impact haberleri kontrol et */
+/* tickCalendar her saniye çağırır: yaklaşan haberleri kontrol et
+   İki kaynak: (a) genel alarm (açıksa, yüksek önem, seçili offsetler)
+              (b) tek-olay hatırlatmalar (🔔 ile işaretlenenler — genel alarm kapalı olsa bile) */
+const REMINDER_OFFSETS=[3,0];  // tek-olay hatırlatma varsayılanı: 3 dk önce + haber anında
+function fireAt(e,off,secToEv){
+  const target=off*60;
+  const key=evtKey(e)+'|'+off;
+  if(!alFired.has(key) && secToEv<=target+0.5 && secToEv>target-1.5){
+    alFired.add(key); playAlarm(); showAlarmToast(e,off); return true;
+  }
+  return false;
+}
 function checkAlarms(){
-  if(!alCfg.on)return;
-  const active=Object.keys(alCfg.offsets).filter(k=>alCfg.offsets[k]).map(Number);
-  if(!active.length)return;
   const now=Date.now();
-  // yalnızca yüksek önemli + izlenen para birimleri, önümüzdeki ~16 dk
+  const genActive=alCfg.on?Object.keys(alCfg.offsets).filter(k=>alCfg.offsets[k]).map(Number):[];
   calEvents.forEach(e=>{
-    if(e.impact!=='High'||!calCur.has(e.cur))return;
     const secToEv=(e.date.getTime()-now)/1000;
-    if(secToEv<-2||secToEv>16*60)return;
-    const evKey=e.date.getTime()+'|'+e.cur+'|'+e.title;
-    active.forEach(off=>{
-      const target=off*60;                // hedef: haberden 'off' dk önce
-      const key=evKey+'|'+off;
-      // pencere: hedef saniyeye 0..1.5 sn kala tetikle (saniyelik tick ile ıskalanmasın)
-      if(!alFired.has(key) && secToEv<=target+0.5 && secToEv>target-1.5){
-        alFired.add(key); playAlarm(); showAlarmToast(e,off);
-      }
-    });
+    if(secToEv<-2||secToEv>16*60)return;   // yalnızca önümüzdeki ~16 dk
+    // (a) genel alarm: yüksek önem + izlenen pariteler + seçili offsetler
+    if(genActive.length && e.impact==='High' && calCur.has(e.cur)) genActive.forEach(off=>fireAt(e,off,secToEv));
+    // (b) tek-olay hatırlatma: kullanıcı bu olayı 🔔 ile işaretlediyse (önem/parite filtresinden bağımsız)
+    if(calReminders.has(evtKey(e))) REMINDER_OFFSETS.forEach(off=>fireAt(e,off,secToEv));
   });
-  // eski kayıtları temizle (bellek şişmesin)
   if(alFired.size>400)alFired.clear();
 }
 function showAlarmToast(e,off){
   const when=off>0?off+' dk sonra':'ŞİMDİ';
   let t=document.getElementById('al-toast');
   if(!t){t=document.createElement('div');t.id='al-toast';t.style.cssText='position:fixed;right:18px;bottom:18px;z-index:9999;background:var(--panel);border:1px solid var(--red);border-left:4px solid var(--red);border-radius:12px;padding:12px 16px;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:320px;font-size:13px;color:var(--text);animation:alIn .25s ease';document.body.appendChild(t);}
-  t.innerHTML=`<div style="font-weight:700;margin-bottom:2px">🔔 Önemli haber · ${when}</div><div>${FLAG[e.cur]||''} ${e.cur} · ${e.title}</div><div style="color:var(--muted);font-size:12px;margin-top:3px">${fmtTime(e.date)}</div>`;
+  const hdr=e.impact==='High'?'🔔 Önemli haber':'🔔 Haber hatırlatması';
+  t.innerHTML=`<div style="font-weight:700;margin-bottom:2px">${hdr} · ${when}</div><div>${FLAG[e.cur]||''} ${e.cur} · ${e.title}</div><div style="color:var(--muted);font-size:12px;margin-top:3px">${fmtTime(e.date)}</div>`;
   t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';},8000);
 }
 if(!document.getElementById('al-anim')){const st=document.createElement('style');st.id='al-anim';st.textContent='@keyframes alIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}';document.head.appendChild(st);}
@@ -2653,7 +2698,10 @@ let jrPage=1;
 let jrPairFilter='all';       // journal tablosu parite filtresi
 let jrCharts={};
 let jrImg=null;
-let jDir='long', jEmotion=3, jPlan='yes';
+let jDir='long', jEmotion=3, jPlan='yes', jTags=[];
+/* davranış etiketi meta (istatistik & renk için) */
+const TRADE_TAGS={'plana-sadik':{lbl:'Plana sadık',good:true},'fomo':{lbl:'FOMO'},'revenge':{lbl:'Revenge'},'overtrade':{lbl:'Aşırı işlem'},'erken-cikis':{lbl:'Erken çıkış'},'gec-giris':{lbl:'Geç giriş'},'asiri-lot':{lbl:'Aşırı lot'},'tereddut':{lbl:'Tereddüt'},'plan-disi':{lbl:'Plan dışı'}};
+function updTags(){document.querySelectorAll('#j-tags button').forEach(b=>b.classList.toggle('sel',jTags.includes(b.dataset.t)));}
 
 function jrKey(){return 'fxdesk_journal_'+(currentUser?currentUser.id:'anon')+'_'+activeProfileId;}
 function jrBalKey(){return 'fxdesk_balance_'+(currentUser?currentUser.id:'anon');}
@@ -2890,7 +2938,7 @@ function openTradeModal(){
   ['j-pair','j-entry','j-exit','j-sl','j-tp','j-risk','j-strategy','j-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('j-img').value='';document.getElementById('j-img-prev').innerHTML='';
   document.getElementById('j-share').checked=false;
-  jDir='long';jEmotion=3;jPlan='yes';updDir();updEmo();updPlan();liveCalc();
+  jDir='long';jEmotion=3;jPlan='yes';jTags=[];updDir();updEmo();updPlan();updTags();liveCalc();
   document.getElementById('jr-modal-bg').classList.add('open');
 }
 function closeTradeModal(){document.getElementById('jr-modal-bg').classList.remove('open');}
@@ -2901,7 +2949,7 @@ function saveTrade(){
     entry:document.getElementById('j-entry').value,exit:document.getElementById('j-exit').value,
     sl:document.getElementById('j-sl').value,tp:document.getElementById('j-tp').value,
     risk:document.getElementById('j-risk').value,strategy:document.getElementById('j-strategy').value.trim(),
-    emotion:jEmotion,plan:jPlan,notes:document.getElementById('j-notes').value.trim(),img:jrImg,ts:Date.now()};
+    emotion:jEmotion,plan:jPlan,tags:jTags.slice(),notes:document.getElementById('j-notes').value.trim(),img:jrImg,ts:Date.now()};
   jrTrades.push(t);jrSaveData();
   if(document.getElementById('j-share').checked){
     const c=calcTrade(t);
@@ -2920,6 +2968,7 @@ document.getElementById('jr-modal-bg').addEventListener('click',e=>{if(e.target.
 document.querySelectorAll('#j-dir button').forEach(b=>b.addEventListener('click',()=>{jDir=b.dataset.d;updDir();liveCalc();}));
 document.querySelectorAll('#j-emotion button').forEach(b=>b.addEventListener('click',()=>{jEmotion=+b.dataset.e;updEmo();}));
 document.querySelectorAll('#j-plan button').forEach(b=>b.addEventListener('click',()=>{jPlan=b.dataset.p;updPlan();}));
+document.querySelectorAll('#j-tags button').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.t;const i=jTags.indexOf(t);if(i>=0)jTags.splice(i,1);else jTags.push(t);updTags();}));
 ['j-entry','j-exit','j-sl','j-risk'].forEach(id=>document.getElementById(id).addEventListener('input',liveCalc));
 document.getElementById('j-img').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;readAndResize(f,data=>{jrImg=data;document.getElementById('j-img-prev').innerHTML=`<img src="${data}">`;});});
 
@@ -4417,6 +4466,57 @@ function renderStats(){
   // aylık tablo
   const mk=Object.keys(mAgg).sort();
   h+=card('🗓 Aylık Performans','<div class="st-tw"><table class="jr-table"><thead><tr><th>Ay</th><th>İşlem</th><th>Kazanç %</th><th>Net</th></tr></thead><tbody>'+mk.map(k=>{const o=mAgg[k];return '<tr><td>'+k+'</td><td>'+o.n+'</td><td>%'+Math.round(o.w/o.n*100)+'</td><td class="'+cls(o.net)+'">'+f$(o.net)+'</td></tr>';}).join('')+'</tbody></table></div>');
+  // === Duygunun Maliyeti (davranış etiketleri) ===
+  const tagAgg={};
+  ts.forEach(t=>{(t.tags||[]).forEach(tg=>{const o=tagAgg[tg]||(tagAgg[tg]={n:0,w:0,net:0});o.n++;if(t.result==='win')o.w++;o.net+=t.pnl;});});
+  const tagKeys=Object.keys(tagAgg).sort((a,b)=>tagAgg[a].net-tagAgg[b].net); // en çok kaybettiren üstte
+  if(tagKeys.length){
+    const rows=tagKeys.map(k=>{const o=tagAgg[k];const meta=TRADE_TAGS[k]||{lbl:k};const good=meta.good;
+      return '<tr><td><span class="st-tagpill'+(good?' good':(o.net<0?' bad':''))+'">'+esc(meta.lbl)+'</span></td><td>'+o.n+'</td><td>%'+Math.round(o.w/o.n*100)+'</td><td class="'+cls(o.net)+'">'+f$(o.net)+'</td></tr>';
+    }).join('');
+    const worst=tagKeys[0], wo=tagAgg[worst];
+    const insight=(wo&&wo.net<0)?'<div class="st-insight">💡 En pahalı alışkanlığın: <b>'+esc((TRADE_TAGS[worst]||{lbl:worst}).lbl)+'</b> — bu etiketli işlemlerde toplam <b class="neg">'+f$(wo.net)+'</b>.</div>':'';
+    h+=card('🧠 Duygunun Maliyeti <small style="font-weight:400;color:var(--muted)">· işlem eklerken davranış etiketi seç</small>',insight+'<div class="st-tw"><table class="jr-table"><thead><tr><th>Etiket</th><th>İşlem</th><th>Kazanç %</th><th>Net</th></tr></thead><tbody>'+rows+'</tbody></table></div>');
+  } else {
+    h+=card('🧠 Duygunun Maliyeti','<div class="st-empty2">Henüz davranış etiketi yok. İşlem eklerken FOMO / Revenge / Plana sadık gibi etiketleri seç — hangi duygunun sana kaç dolara mal olduğunu burada görürsün.</div>');
+  }
+
+  // === Disiplin Skoru + Seriler ===
+  // Günlük skor: her işlem güne göre; stop var mı, plana uydu mu, aşırı-lot/overtrade/plan-dışı etiketi yok mu
+  const dayMap={};
+  ts.forEach(t=>{const d=t.date||'';if(!d)return;(dayMap[d]||(dayMap[d]=[])).push(t);});
+  const dayKeys2=Object.keys(dayMap).sort();
+  function dayScore(list){
+    let score=0,max=0;
+    list.forEach(t=>{
+      max+=4;
+      if(t.sl!==''&&t.sl!=null)score++;                       // stop kullandı
+      if(t.plan==='yes')score++;                              // plana uydu
+      const tags=t.tags||[];
+      if(!tags.some(x=>['overtrade','asiri-lot','plan-disi','revenge','fomo'].includes(x)))score++; // duygusal ihlal yok
+      if(tags.includes('plana-sadik')||t.plan==='yes')score++;// disiplin teyidi
+    });
+    return max?Math.round(score/max*100):null;
+  }
+  const dayScores=dayKeys2.map(d=>({d,s:dayScore(dayMap[d])})).filter(x=>x.s!=null);
+  const avgDisc=dayScores.length?Math.round(dayScores.reduce((s,x)=>s+x.s,0)/dayScores.length):null;
+  // seriler: plana sadık gün (skor>=75) art arda
+  let curStreak=0,bestStreak=0;
+  dayScores.forEach(x=>{if(x.s>=75){curStreak++;bestStreak=Math.max(bestStreak,curStreak);}else curStreak=0;});
+  // güncel aktif seri (sondan)
+  let liveStreak=0; for(let i=dayScores.length-1;i>=0;i--){if(dayScores[i].s>=75)liveStreak++;else break;}
+  if(dayScores.length){
+    const badge=avgDisc>=80?'🟢':avgDisc>=60?'🟡':'🔴';
+    h+=card('🎯 Disiplin Skoru & Seriler','<div class="st-disc">'
+      +'<div class="st-disc-big '+(avgDisc>=80?'pos':avgDisc>=60?'':'neg')+'">'+badge+' '+avgDisc+'<small>/100</small></div>'
+      +'<div class="st-disc-meta">'
+        +'<div><span>Değerlendirilen gün</span><b>'+dayScores.length+'</b></div>'
+        +'<div><span>🔥 Güncel seri (plana sadık)</span><b class="pos">'+liveStreak+' gün</b></div>'
+        +'<div><span>🏅 En uzun seri</span><b class="pos">'+bestStreak+' gün</b></div>'
+      +'</div></div>'
+      +'<div class="st-disc-note">Skor: stop kullanımı · plana uyum · duygusal ihlal (FOMO/Revenge/aşırı işlem/lot) olmaması üzerinden hesaplanır. ≥75 olan günler "plana sadık" sayılır.</div>');
+  }
+
   // profil karşılaştırma (kendi profillerin — zengin metrikler, izlenen profil vurgulu)
   const pf$=v=>v==null?'-':(v===Infinity?'∞':v.toFixed(2));
   const cmpRows=_profiles.map(p=>{

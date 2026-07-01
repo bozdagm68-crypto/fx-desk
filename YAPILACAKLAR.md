@@ -9,6 +9,62 @@
 <!-- Aklına gelenleri buraya yaz; ben düzenleyip sıralarım -->
 - [ ] (boş — sıradakini yaz)
 
+---
+
+## 🚀 Büyüme Fikirleri — 2026-07-01 (araştırma temelli · sen seçeceksin, sonra kodlanır)
+
+> 2026 trader-uygulaması trendleri + DC/prop kitlemize göre önerildi. Kaynaklar: TradeZella, Edgewonk, TradesViz, Plancana, prop firma dokümanları.
+> **Hepsi mevcut altyapının (Supabase + profiller + journal + istatistik + feed) üstüne oturur — sıfırdan sistem değil.** Karar bekliyor; seçtiğini önce ayrı planlar, onayınla kodlarım.
+> Not: Leaderboard/aşırı gamification bilinçli olarak DÜŞÜK öncelikte — kaynaklar aşırı risk almayı teşvik edip regülasyon riski doğurduğunu vurguluyor.
+
+### 🥇 Kademe 1 — En yüksek etki, kitlemize birebir
+
+- [ ] **1. Prop Firma Meydan Okuma Takipçisi** ⭐ *(en niş — kitlemizin çoğu prop/fon trader'ı)*
+  - Fon firması profiline **kural şablonu** alanları: profit hedefi %, günlük max kayıp %, toplam max drawdown %, min işlem günü, DD tipi (**trailing / static / trailing→static-lock**), başlangıç bakiyesi.
+  - Hazır ön ayarlar: **FTMO, FundedNext, The5ers, BrightFunded** (+ "Özel").
+  - Raporlar/İstatistik'te canlı **"Meydan Okuma Paneli"**: hedefe kalan $/%, **drawdown tamponu** (bugün ne kadar daha kaybedersen yanarsın), profit hedefi ilerleme çubuğu, kalan işlem günü, tutarlılık (consistency) skoru.
+  - **İhlalden önce uyarı**: "Günlük limitin −%X'ine geldin" (renk + isteğe bağlı sesli/görsel alarm).
+  - Veri: profildeki mevcut `startBalance`/trade'lerden hesaplanır; yeni alanlar profile eklenir. Backend değişikliği minimal.
+  - *Neden:* TradesViz/PropTracker'ın en çok konuşulan özelliği; Türkçe hiçbir DC topluluğunda düzgün yok. Tek başına bağlılık yaratır.
+
+- [ ] **2. Duygu & Kural Etiketleri + "Duygunun Maliyeti" raporu** ⭐ *(2026'nın en güçlü trendi · küçük iş, dev etki)*
+  - İşlem eklerken/düzenlerken çoklu etiket: `FOMO`, `Revenge`, `Overtrade`, `Erken çıkış`, `Plan dışı`, `Tereddüt`, `Aşırı lot`, **`Plana sadık`**.
+  - İstatistik'te yeni kart **"Duygunun Maliyeti"**: her etiket için işlem sayısı, win %, net $. Örn. *"Plana sadık: +2.400$ / %71 — FOMO: −1.850$ / %28"*.
+  - "Etikete göre sırala/filtrele" → kendi kişisel kurallarını çıkarır.
+  - Veri: journal'a `tags[]` alanı (zaten `psychology` alanı vardı — genişletilir), istatistikte agregasyon. Neredeyse tamamen frontend.
+  - *Neden:* Kaynaklar bunun drawdown'u %30'a kadar azalttığını söylüyor; Edgewonk/Plancana'nın çekirdek satış noktası.
+
+- [ ] **3. Disiplin Skoru + Seriler (Streak)**
+  - Her işlem gününe otomatik **0–100 disiplin skoru**: stop'a saygı (SL vardı mı), risk sabitliği (lot/risk tutarlı mı), aşırı işlem yok, plana sadık etiketi.
+  - **Seri**: "X gün üst üste plana sadık", "Y gün stop'a saygı". Profilde/istatistikte rozet.
+  - Kişisel & motive edici — leaderboard'un riskli sosyal-baskı tarafı olmadan.
+
+### 🥈 Kademe 2 — Topluluğu (DC modelini) güçlendirir
+
+- [ ] **4. Sonuç Takipli Paylaşım (accountability / şeffaflık)**
+  - Setup paylaşınca opsiyonel **hedef & stop** gir. Kapandığında paylaşan **"✅ Tuttu / ❌ Tutmadı / ⏳ Devam"** işaretler.
+  - Profilde **"paylaşım isabet oranı"** birikir (örn. 12/18 tuttu · %67).
+  - *Neden:* "Sinyal atıp kaçma" kültürünü kırar; bu topluluklarda en çok istenen şeffaflık ("community fingerprint").
+
+- [ ] **5. Haftalık "Setup Yarışı" / Haftanın Analizi**
+  - Paylaşımlar zaten oy alıyor. Hafta sonunda en çok oylanan setup **"🏆 Haftanın Analizi"** rozetiyle sabitlenir.
+  - Basit, düzenli içerik motivasyonu + hesap verebilirlik.
+
+- [ ] **6. Rozetler & Ünvanlar (sağlıklı gamification)**
+  - "30 gün journal serisi", "İlk fon hesabı geçildi", "100 işlem", "Analist (10 paylaşım tuttu)".
+  - Aktiviteyi değil **disiplini** ödüllendirir (regülasyon-güvenli tasarım).
+
+### 🥉 Kademe 3 — Cila / ileri (çoğu Beta yol haritasına)
+
+- [ ] **7. AI Trade Koçu** *(Beta)* — Haftalık özet: "En çok Salı ve XAU'da kaybediyorsun; ort. RR 1.2 — 1.5 hedefle." Mevcut istatistik verisinden, Anthropic API (claude-haiku ucuz) ile. Kişiselleştirilmiş, Türkçe.
+- [ ] **8. PWA / "Ana ekrana ekle"** — manifest + service worker; telefonda uygulama gibi açılır, çevrimdışı kabuk, ikon. DC kitlesi mobil ağırlıklı.
+- [ ] **9. Haber alarmında arka plan push bildirimi** — mevcut alarm yalnızca sekme açıkken çalıyor; PWA + Notification/Service Worker ile sekme kapalıyken de yüksek-önemli haber uyarısı.
+- [ ] **10. Ekonomik takvim: "hatırlat" (tek olay)** — takvimdeki bir olaya tıkla → sadece o olay için alarm kur (mevcut genel alarmın yanında).
+
+**Önerilen başlangıç sırası:** #1 → #2 → #4. (Kitle uyumu + en güçlü trend + topluluk şeffaflığı; üçü de mevcut altyapıya oturur.)
+
+---
+
 ## ⭐ Sıradaki seçilenler — 2026-06-30 (sırayla yapılacak)
 1. [x] **İşlem Günlüğüm: profil özeti + strateji etiketi** — ✅ Üstte özet kartları (İşlem, Toplam P&L, Ort. RR, Toplam R, Başarı %, En çok parite, En iyi/En kötü işlem) — aktif profil + filtreye göre. Tabloya **Strateji** kolonu (serbest metin — istediğini elle yaz; hazır öneriler OB/FVG/Likidite/Kırılım… + **kullanıcının kendi yazdığı stratejiler tüm profillerinden toplanıp öneri listesine eklenir**; değere göre otomatik renkli etiket) + **strateji filtresi** (parite filtresinin yanında). Filtre seçince özet o seçime göre güncellenir (örn. sadece FVG → FVG başarı %'si).
 2. [x] **İşlem Günlüğüm → Paylaş köprüsü** — ✅ Her satırda **📤** butonu. Tıklayınca Paylaşımlar sekmesine geçer ve composer'ı otomatik doldurur: görseller (setup + after, max 3), parite, ve metin (açıklama + "Strateji: … · TF: … · RR: …"). Bias nötr varsayılan (günlükte yön yok), kullanıcı değiştirip "Paylaş"a basar.
