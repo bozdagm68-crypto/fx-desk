@@ -11,15 +11,16 @@
 
 ---
 
-## 🚀 Büyüme Fikirleri — 2026-07-01 (araştırma temelli · sen seçeceksin, sonra kodlanır)
+## 🚀 Büyüme Fikirleri — 2026-07-01 (araştırma temelli)
 
 > 2026 trader-uygulaması trendleri + DC/prop kitlemize göre önerildi. Kaynaklar: TradeZella, Edgewonk, TradesViz, Plancana, prop firma dokümanları.
-> **Hepsi mevcut altyapının (Supabase + profiller + journal + istatistik + feed) üstüne oturur — sıfırdan sistem değil.** Karar bekliyor; seçtiğini önce ayrı planlar, onayınla kodlarım.
 > Not: Leaderboard/aşırı gamification bilinçli olarak DÜŞÜK öncelikte — kaynaklar aşırı risk almayı teşvik edip regülasyon riski doğurduğunu vurguluyor.
+>
+> **DURUM (2026-07-01 gece, sen uyurken yapıldı):** 7 özellik KODLANDI ve push edildi (#1,#2,#3,#6-kişisel,#8,#9,#10). Kalan 3'ü (#4,#5,#7) **senin kararını/SQL'ini/API tercihini** bekliyor — aşağıda işaretli. Uyanınca birlikte bitiririz.
 
 ### 🥇 Kademe 1 — En yüksek etki, kitlemize birebir
 
-- [ ] **1. Prop Firma Meydan Okuma Takipçisi** ⭐ *(en niş — kitlemizin çoğu prop/fon trader'ı)*
+- [x] **1. Prop Firma Meydan Okuma Takipçisi** ⭐ ✅ KODLANDI (commit a493a02) — profil kural şablonu + hazır firmalar (FTMO/FundedNext/The5ers/BrightFunded) + Raporlar'da canlı panel (hedef/günlük payı/DD tamponu/min gün) + limite yakın uyarı. DD matematiği (static/trailing/trailing-lock) birim-test edildi.
   - Fon firması profiline **kural şablonu** alanları: profit hedefi %, günlük max kayıp %, toplam max drawdown %, min işlem günü, DD tipi (**trailing / static / trailing→static-lock**), başlangıç bakiyesi.
   - Hazır ön ayarlar: **FTMO, FundedNext, The5ers, BrightFunded** (+ "Özel").
   - Raporlar/İstatistik'te canlı **"Meydan Okuma Paneli"**: hedefe kalan $/%, **drawdown tamponu** (bugün ne kadar daha kaybedersen yanarsın), profit hedefi ilerleme çubuğu, kalan işlem günü, tutarlılık (consistency) skoru.
@@ -27,41 +28,47 @@
   - Veri: profildeki mevcut `startBalance`/trade'lerden hesaplanır; yeni alanlar profile eklenir. Backend değişikliği minimal.
   - *Neden:* TradesViz/PropTracker'ın en çok konuşulan özelliği; Türkçe hiçbir DC topluluğunda düzgün yok. Tek başına bağlılık yaratır.
 
-- [ ] **2. Duygu & Kural Etiketleri + "Duygunun Maliyeti" raporu** ⭐ *(2026'nın en güçlü trendi · küçük iş, dev etki)*
+- [x] **2. Duygu & Kural Etiketleri + "Duygunun Maliyeti" raporu** ⭐ ✅ KODLANDI (commit cb2f7d8) — işlem modalına 9 davranış etiketi (FOMO/Revenge/Plana-sadık…), İstatistik'te "Duygunun Maliyeti" kartı (etikete göre net/win% + en pahalı alışkanlık uyarısı).
   - İşlem eklerken/düzenlerken çoklu etiket: `FOMO`, `Revenge`, `Overtrade`, `Erken çıkış`, `Plan dışı`, `Tereddüt`, `Aşırı lot`, **`Plana sadık`**.
   - İstatistik'te yeni kart **"Duygunun Maliyeti"**: her etiket için işlem sayısı, win %, net $. Örn. *"Plana sadık: +2.400$ / %71 — FOMO: −1.850$ / %28"*.
   - "Etikete göre sırala/filtrele" → kendi kişisel kurallarını çıkarır.
   - Veri: journal'a `tags[]` alanı (zaten `psychology` alanı vardı — genişletilir), istatistikte agregasyon. Neredeyse tamamen frontend.
   - *Neden:* Kaynaklar bunun drawdown'u %30'a kadar azalttığını söylüyor; Edgewonk/Plancana'nın çekirdek satış noktası.
 
-- [ ] **3. Disiplin Skoru + Seriler (Streak)**
+- [x] **3. Disiplin Skoru + Seriler (Streak)** ✅ KODLANDI (commit cb2f7d8) — İstatistik'te günlük 0–100 disiplin skoru (stop/plan/duygusal-ihlal) + güncel & en uzun "plana sadık" serisi.
   - Her işlem gününe otomatik **0–100 disiplin skoru**: stop'a saygı (SL vardı mı), risk sabitliği (lot/risk tutarlı mı), aşırı işlem yok, plana sadık etiketi.
   - **Seri**: "X gün üst üste plana sadık", "Y gün stop'a saygı". Profilde/istatistikte rozet.
   - Kişisel & motive edici — leaderboard'un riskli sosyal-baskı tarafı olmadan.
 
 ### 🥈 Kademe 2 — Topluluğu (DC modelini) güçlendirir
 
-- [ ] **4. Sonuç Takipli Paylaşım (accountability / şeffaflık)**
+- [ ] **4. Sonuç Takipli Paylaşım (accountability / şeffaflık)** ⏸️ **SENİN KARARIN + SQL GEREKİYOR**
   - Setup paylaşınca opsiyonel **hedef & stop** gir. Kapandığında paylaşan **"✅ Tuttu / ❌ Tutmadı / ⏳ Devam"** işaretler.
   - Profilde **"paylaşım isabet oranı"** birikir (örn. 12/18 tuttu · %67).
-  - *Neden:* "Sinyal atıp kaçma" kültürünü kırar; bu topluluklarda en çok istenen şeffaflık ("community fingerprint").
+  - **Neden yarım bırakıldı:** `posts` tablosuna yeni kolonlar gerekiyor (`target`, `stop`, `outcome`) → Supabase'de SQL + RLS. Sen uyurken backend şemasına dokunmadım (temkin). Uyanınca: SQL'i hazırlarım, MCP ile çalıştırırız, sonra kodlarım. Fail-safe yaparım (kolon yoksa özellik gizli kalır).
 
-- [ ] **5. Haftalık "Setup Yarışı" / Haftanın Analizi**
+- [ ] **5. Haftalık "Setup Yarışı" / Haftanın Analizi** ⏸️ **#4'e bağlı / topluluk verisi**
   - Paylaşımlar zaten oy alıyor. Hafta sonunda en çok oylanan setup **"🏆 Haftanın Analizi"** rozetiyle sabitlenir.
-  - Basit, düzenli içerik motivasyonu + hesap verebilirlik.
+  - **Neden bekliyor:** Ya sabit rozet için `posts`'a `pinned/featured` kolonu, ya da tamamen istemci-tarafı "bu haftanın en çok oylananı" hesabı (backendsiz de yapılabilir — uyanınca hangisini istediğini soracağım).
 
-- [ ] **6. Rozetler & Ünvanlar (sağlıklı gamification)**
-  - "30 gün journal serisi", "İlk fon hesabı geçildi", "100 işlem", "Analist (10 paylaşım tuttu)".
-  - Aktiviteyi değil **disiplini** ödüllendirir (regülasyon-güvenli tasarım).
+- [x] **6. Rozetler & Ünvanlar (kişisel kısım)** ✅ KODLANDI (commit sonraki) — İstatistik'te 9 rozet: İlk Adım, Yüzler Kulübü (100 işlem), Disiplin Serisi (7g), Demir İrade (30g), Keskin Nişancı (%60+), Öz-Farkındalık (etiket), Kalkan (disiplin 80+), Fon Avcısı (meydan okuma geçildi), Kârlı Ay. Kazanılan renkli, diğerleri soluk.
+  - ⏸️ *Topluluk rozetleri* ("Analist — 10 paylaşım tuttu") #4'e bağlı, onunla gelecek.
 
 ### 🥉 Kademe 3 — Cila / ileri (çoğu Beta yol haritasına)
 
-- [ ] **7. AI Trade Koçu** *(Beta)* — Haftalık özet: "En çok Salı ve XAU'da kaybediyorsun; ort. RR 1.2 — 1.5 hedefle." Mevcut istatistik verisinden, Anthropic API (claude-haiku ucuz) ile. Kişiselleştirilmiş, Türkçe.
-- [ ] **8. PWA / "Ana ekrana ekle"** — manifest + service worker; telefonda uygulama gibi açılır, çevrimdışı kabuk, ikon. DC kitlesi mobil ağırlıklı.
-- [ ] **9. Haber alarmında arka plan push bildirimi** — mevcut alarm yalnızca sekme açıkken çalıyor; PWA + Notification/Service Worker ile sekme kapalıyken de yüksek-önemli haber uyarısı.
-- [ ] **10. Ekonomik takvim: "hatırlat" (tek olay)** — takvimdeki bir olaya tıkla → sadece o olay için alarm kur (mevcut genel alarmın yanında).
+- [ ] **7. AI Trade Koçu** *(Beta)* ⏸️ **SENİN KARARIN GEREKİYOR (API + maliyet)** — Haftalık özet: "En çok Salı ve XAU'da kaybediyorsun; ort. RR 1.2 — 1.5 hedefle." Mevcut istatistik verisinden, Anthropic API (claude-haiku ucuz) ile.
+  - **Neden bekliyor:** (a) Anthropic API anahtarı gerekiyor, (b) anahtarı tarayıcıya koyamayız (güvenlik) → Supabase Edge Function proxy şart, (c) kullanım başına ufak maliyet. Bunlar senin kararların. Uyanınca: maliyet/mimari konuşup kurarız. *(Beta sekmesinde "yakında" olarak duruyor.)*
+- [x] **8. PWA / "Ana ekrana ekle"** ✅ KODLANDI (commit 0d6b5db) — manifest.webmanifest + sw.js + KTC ikonları; "Uygulamayı yükle" çipi; çevrimdışı kabuk.
+- [x] **9. Haber alarmında arka plan push bildirimi** ✅ KODLANDI (commit 0d6b5db) — alarm/tek-olay hatırlatma tetiklenince Service Worker OS bildirimi (sekme kapalı/arka planda). İzin isteği + fail-safe toast.
+- [x] **10. Ekonomik takvim: "hatırlat" (tek olay)** ✅ KODLANDI (commit cb2f7d8) — takvim satırında 🔔 → o olay için 3dk önce + haber anında uyarı (genel alarmdan bağımsız).
 
-**Önerilen başlangıç sırası:** #1 → #2 → #4. (Kitle uyumu + en güçlü trend + topluluk şeffaflığı; üçü de mevcut altyapıya oturur.)
+### ⏸️ Uyanınca birlikte yapılacaklar (karar/SQL/API bekliyor)
+1. **#4 Sonuç Takipli Paylaşım** — posts tablosuna kolon (SQL, MCP ile birlikte çalıştırırız).
+2. **#5 Haftanın Analizi** — backendsiz mi (istemci hesabı) yoksa kalıcı rozet mi (SQL) — sen seçeceksin.
+3. **#7 AI Koç** — Anthropic API + Edge Function proxy + maliyet kararı.
+
+### ⚠️ Teknik borç (uyanınca bir bakılmalı)
+- **İki alarm sistemi paralel duruyor:** eski (`alarmOn`/`fireNotif`/`cal-bell` id butonu, `fxdesk_alarm`='on'/'off') + yeni (Ayarlar'daki `alCfg`, `fxdesk_alarm`=JSON). İkisi aynı localStorage anahtarını farklı formatta kullanıyor. Pratikte çakışmıyor (yeni sistem kazanıyor) ama eskisini temizlemek gerek. Riskli olduğu için sen uyurken dokunmadım.
 
 ---
 

@@ -1086,6 +1086,13 @@
   .st-disc-meta div{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:3px 0}
   .st-disc-meta span{color:var(--muted)}
   .st-disc-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+  .st-badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+  .st-badge{background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:12px 10px;text-align:center;opacity:.4;filter:grayscale(1);transition:.15s}
+  .st-badge.got{opacity:1;filter:none;border-color:rgba(245,158,11,.4);background:linear-gradient(180deg,rgba(245,158,11,.08),var(--panel-2))}
+  .st-badge-ic{font-size:26px;line-height:1;margin-bottom:6px}
+  .st-badge-nm{font-size:12.5px;font-weight:700;margin-bottom:3px}
+  .st-badge-ds{font-size:10.5px;color:var(--muted);line-height:1.35}
+  @media(max-width:560px){.st-badges{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}}
   .st-card .pos{color:var(--green)} .st-card .neg{color:var(--red)}
   @media(max-width:760px){.st-grid2{grid-template-columns:1fr}.st-ls{grid-template-columns:1fr}}
   /* mobil: ayar satirlari dar ekranda alt alta sarsin; alarm kontrolleri sigsin */
@@ -4709,6 +4716,24 @@ function renderStats(){
       +'</div></div>'
       +'<div class="st-disc-note">Skor: stop kullanımı · plana uyum · duygusal ihlal (FOMO/Revenge/aşırı işlem/lot) olmaması üzerinden hesaplanır. ≥75 olan günler "plana sadık" sayılır.</div>');
   }
+
+  // === Rozetler & Ünvanlar (kişisel — disiplini ödüllendirir) ===
+  const badges=[];
+  const B=(icon,name,desc,got)=>badges.push({icon,name,desc,got});
+  const winRate=n?Math.round(wins.length/n*100):0;
+  const propPassed=_profiles.some(p=>{if(p.chTarget==null)return false;const cs=challengeStats(p, (p.id===activeProfileId?jrTrades:(function(){try{return JSON.parse(localStorage.getItem('fxdesk_journal_'+(currentUser?currentUser.id:'anon')+'_'+p.id))||[];}catch(e){return[];}})()));return cs.targetProg!=null&&cs.targetProg>=100;});
+  B('📓','İlk Adım','İlk işlemini kaydettin',n>=1);
+  B('💯','Yüzler Kulübü','100+ işlem kaydettin',n>=100);
+  B('🔥','Disiplin Serisi','7+ gün üst üste plana sadık',bestStreak>=7);
+  B('🏅','Demir İrade','30+ gün üst üste plana sadık',bestStreak>=30);
+  B('🎯','Keskin Nişancı','%60+ kazanma oranı (20+ işlem)',n>=20&&winRate>=60);
+  B('🧠','Öz-Farkındalık','Davranış etiketi kullanmaya başladın',ts.some(t=>(t.tags||[]).length));
+  B('🛡','Kalkan','Ortalama disiplin skoru 80+',avgDisc!=null&&avgDisc>=80);
+  B('🏆','Fon Avcısı','Bir meydan okumada kâr hedefini geçtin',propPassed);
+  B('📈','Kârlı Ay','Bir ayı artıda kapattın',Object.values(mAgg).some(o=>o.net>0));
+  const gotN=badges.filter(b=>b.got).length;
+  h+=card('🎖 Rozetler & Ünvanlar <small style="font-weight:400;color:var(--muted)">· '+gotN+'/'+badges.length+' kazanıldı</small>',
+    '<div class="st-badges">'+badges.map(b=>`<div class="st-badge${b.got?' got':''}" title="${esc(b.desc)}"><div class="st-badge-ic">${b.icon}</div><div class="st-badge-nm">${esc(b.name)}</div><div class="st-badge-ds">${esc(b.desc)}</div></div>`).join('')+'</div>');
 
   // profil karşılaştırma (kendi profillerin — zengin metrikler, izlenen profil vurgulu)
   const pf$=v=>v==null?'-':(v===Infinity?'∞':v.toFixed(2));
