@@ -2,8 +2,15 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Kodak Trade Community</title>
+<meta name="theme-color" content="#020202">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kodak Trade">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -2067,7 +2074,8 @@ let calReminders=(function(){try{return new Set(JSON.parse(localStorage.getItem(
 function saveReminders(){try{localStorage.setItem('fxdesk_cal_reminders',JSON.stringify([...calReminders]));}catch(e){}}
 function toggleReminder(k){
   if(calReminders.has(k)){calReminders.delete(k);}
-  else{calReminders.add(k); if(typeof alCtx==='function')alCtx();}   // ilk tıkta ses iznini uyandır
+  else{calReminders.add(k); if(typeof alCtx==='function')alCtx();   // ilk tıkta ses iznini uyandır
+    try{if('Notification'in window && Notification.permission==='default')Notification.requestPermission();}catch(e){}}
   saveReminders(); renderCalendar();
 }
 
@@ -2162,6 +2170,10 @@ function showAlarmToast(e,off){
   const hdr=e.impact==='High'?'🔔 Önemli haber':'🔔 Haber hatırlatması';
   t.innerHTML=`<div style="font-weight:700;margin-bottom:2px">${hdr} · ${when}</div><div>${FLAG[e.cur]||''} ${e.cur} · ${e.title}</div><div style="color:var(--muted);font-size:12px;margin-top:3px">${fmtTime(e.date)}</div>`;
   t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';},8000);
+  // Sekme arka plandaysa/kapalıysa OS bildirimi de gönder (#9)
+  if(typeof notifyOS==='function'){
+    notifyOS(hdr+' · '+when,(FLAG[e.cur]||'')+' '+e.cur+' · '+e.title+' ('+fmtTime(e.date)+')','ktc-'+evtKey(e));
+  }
 }
 if(!document.getElementById('al-anim')){const st=document.createElement('style');st.id='al-anim';st.textContent='@keyframes alIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}';document.head.appendChild(st);}
 
@@ -2179,7 +2191,10 @@ function syncAlarmUI(){
 }
 function bindAlarmUI(){
   const on=document.getElementById('al-on'); if(!on||on._bound)return; on._bound=true;
-  on.addEventListener('change',()=>{alCfg.on=on.checked;if(on.checked)alCtx();saveAlarmCfg();syncAlarmUI();});
+  on.addEventListener('change',()=>{alCfg.on=on.checked;if(on.checked){alCtx();
+    // arka planda da uyarı için bildirim izni iste (opsiyonel — reddedilse de ses+toast çalışır)
+    try{if('Notification'in window && Notification.permission==='default')Notification.requestPermission();}catch(e){}
+  }saveAlarmCfg();syncAlarmUI();});
   [['al-15',15],['al-3',3],['al-0',0]].forEach(([id,off])=>{
     document.getElementById(id).addEventListener('change',ev=>{alCfg.offsets[off]=ev.target.checked;saveAlarmCfg();});
   });
@@ -4874,6 +4889,44 @@ async function authInit(){
   if(currentUser)showApp(); else showGate();
 }
 authInit();
+
+/* ================= PWA (ana ekrana ekle) + BİLDİRİM ================= */
+let _swReg=null;
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(r=>{_swReg=r;}).catch(()=>{});
+  });
+}
+/* Bildirim köprüsü: sekme kapalı/arka planda olsa bile OS bildirimi göster.
+   Alarm sistemi (showAlarmToast) bunu çağırır. İzin yoksa sessizce toast'a düşer. */
+function notifyOS(title,body,tag){
+  try{
+    if('Notification'in window && Notification.permission==='granted'){
+      if(_swReg&&_swReg.active){ _swReg.active.postMessage({type:'notify',title,body,tag}); return true; }
+      if(navigator.serviceWorker&&navigator.serviceWorker.controller){ navigator.serviceWorker.controller.postMessage({type:'notify',title,body,tag}); return true; }
+      new Notification(title,{body,icon:'icon-192.png',tag}); return true;
+    }
+  }catch(e){}
+  return false;
+}
+/* "Ana ekrana ekle" — beforeinstallprompt yakalanır, kullanıcıya buton gösterilir */
+let _deferredInstall=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_deferredInstall=e;showInstallChip();});
+window.addEventListener('appinstalled',()=>{_deferredInstall=null;const c=document.getElementById('pwa-install');if(c)c.remove();});
+function showInstallChip(){
+  if(document.getElementById('pwa-install')||!_deferredInstall)return;
+  const c=document.createElement('button');
+  c.id='pwa-install';
+  c.textContent='📲 Uygulamayı yükle';
+  c.style.cssText='position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9998;background:var(--accent);color:#fff;border:none;padding:11px 20px;border-radius:24px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,.45)';
+  c.addEventListener('click',async()=>{
+    if(!_deferredInstall)return;
+    _deferredInstall.prompt();
+    try{await _deferredInstall.userChoice;}catch(e){}
+    _deferredInstall=null;c.remove();
+  });
+  document.body.appendChild(c);
+}
 </script>
 </body>
 </html>
