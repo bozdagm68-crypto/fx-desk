@@ -699,6 +699,30 @@
   .theme-btn{background:var(--panel-2);border:1px solid var(--border);color:var(--text);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:15px;margin-left:10px;flex-shrink:0}
   .theme-btn:hover{border-color:var(--accent)}
   .jr-profiles{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  /* prop meydan okuma paneli */
+  .jr-challenge{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:16px}
+  .chal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .chal-head b{font-size:15px}
+  .chal-broker{font-size:11px;color:var(--muted);background:var(--panel-2);border:1px solid var(--border);padding:2px 8px;border-radius:10px;margin-left:6px}
+  .chal-status{font-size:13px;font-weight:700}
+  .chal-bal{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .chal-bal b{color:var(--text)}
+  .chal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .chal-card{background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .chal-lbl{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+  .chal-val{font-size:19px;font-weight:800;letter-spacing:-.3px;margin-bottom:8px}
+  .chal-val small{font-size:12px;font-weight:600;color:var(--muted)}
+  .chal-val.pos{color:var(--green)} .chal-val.neg{color:var(--red)}
+  .chal-bar{height:7px;background:var(--bg);border-radius:5px;overflow:hidden;margin-bottom:6px}
+  .chal-bar>div{height:100%;border-radius:5px;transition:width .3s}
+  .chal-sub{font-size:11px;color:var(--muted);line-height:1.4}
+  .chal-chip{font-size:11px;color:var(--muted);background:var(--panel-2);border:1px solid var(--border);padding:2px 9px;border-radius:10px;margin-left:8px}
+  .chal-chip.ok{color:var(--green);border-color:rgba(38,166,154,.4)}
+  .chal-warn{margin-top:12px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:var(--gold);border-radius:8px;padding:9px 12px;font-size:12.5px;font-weight:600}
+  .pr-chall{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:4px}
+  .pr-chall-head{font-size:12.5px;font-weight:700;margin-bottom:10px}
+  .pr-chall-head small{color:var(--muted);font-weight:400}
+  .pr-chall-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .pc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px;min-width:165px;cursor:pointer;transition:.12s}
   .pc:hover{border-color:var(--accent)}
   .pc.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
@@ -1362,6 +1386,7 @@
       </details>
 
       <div class="jr-profiles" id="jr-profiles"></div>
+      <div class="jr-challenge" id="jr-challenge" style="display:none"></div>
       <div class="jr-mt5sum" id="jr-mt5sum" style="display:none"></div>
       <div class="jr-stats" id="jr-stats"></div>
       <div class="jr-scorecard" id="jr-scorecard">
@@ -1420,6 +1445,29 @@
           <div class="jr-f"><label>Hesap türü</label><select id="pr-acc"><option value="demo">Demo</option><option value="real">Gerçek</option><option value="prop">Prop (challenge/funded)</option></select></div>
           <div class="jr-f"><label>Başlangıç bakiyesi</label><input id="pr-bal" type="number" placeholder="10000"></div>
           <div class="jr-f"><label>Para birimi</label><input id="pr-cur" placeholder="USD" value="USD"></div>
+          <div class="jr-f full" id="pr-challbox" style="display:none">
+            <div class="pr-chall">
+              <div class="pr-chall-head">🏆 Meydan Okuma Kuralları <small>· fon firması hedef & limit takibi (opsiyonel)</small></div>
+              <div class="jr-f"><label>Hazır firma şablonu</label><select id="pr-firm">
+                <option value="">— Özel / elle gir —</option>
+                <option value="ftmo2">FTMO — 2 Adım (%10 hedef · %5 günlük · %10 toplam)</option>
+                <option value="fundednext">FundedNext — (%10 hedef · %5 günlük · %10 toplam)</option>
+                <option value="the5ers">The5ers Hyper (%8 hedef · %5 günlük · %6 toplam)</option>
+                <option value="brightfunded">BrightFunded (%8 hedef · %5 günlük · %10 toplam)</option>
+              </select></div>
+              <div class="pr-chall-grid">
+                <div class="jr-f"><label>Kâr hedefi (%)</label><input id="pr-target" type="number" step="any" placeholder="10"></div>
+                <div class="jr-f"><label>Günlük max kayıp (%)</label><input id="pr-dd-daily" type="number" step="any" placeholder="5"></div>
+                <div class="jr-f"><label>Toplam max kayıp (%)</label><input id="pr-dd-max" type="number" step="any" placeholder="10"></div>
+                <div class="jr-f"><label>Min. işlem günü</label><input id="pr-mindays" type="number" step="1" placeholder="0"></div>
+                <div class="jr-f full"><label>Drawdown tipi</label><select id="pr-dd-type">
+                  <option value="static">Statik (başlangıç bakiyesinden)</option>
+                  <option value="trailing">Trailing (en yüksek bakiyeden takip)</option>
+                  <option value="trailing-lock">Trailing → başa kilitli (başlangıcı geçince sabitlenir)</option>
+                </select></div>
+              </div>
+            </div>
+          </div>
           <div class="jr-f full" id="pr-autobox" style="display:none">
             <div class="pr-auto"><b id="pr-auto-name">📈 MT5 geçmiş raporu (HTML) yükle</b>
               <div class="pr-auto-btns">
@@ -2725,7 +2773,105 @@ function renderJournal(){
   jrLoad(); jrPage=1;
   renderUploadReminder();
   renderPairFilter();
+  renderChallenge();
   renderMt5Summary(); renderJrStats(); renderScore(); renderJrTable(); renderJrCharts(); renderJrCalendar();
+}
+
+/* ===== PROP MEYDAN OKUMA PANELİ ===== */
+function challengeStats(p,trades){
+  // kronolojik P&L akışı
+  const ts=trades.map(t=>({...t,...calcTrade(t)})).filter(t=>t.pnl!=null)
+    .sort((a,b)=>((a.date||'').localeCompare(b.date||''))||(a.ts-b.ts));
+  const start=+p.startBalance||0;
+  const net=ts.reduce((s,t)=>s+t.pnl,0);
+  const bal=start+net;
+  // en yüksek bakiye (trailing için)
+  let run=start,peak=start; ts.forEach(t=>{run+=t.pnl;peak=Math.max(peak,run);});
+  // bugünün P&L'i (günlük limit için)
+  const today=new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Istanbul'});
+  const todayPnl=ts.filter(t=>t.date===today).reduce((s,t)=>s+t.pnl,0);
+  // işlem yapılan farklı gün sayısı
+  const days=new Set(ts.map(t=>t.date).filter(Boolean)).size;
+  // hedef
+  const targetPct=p.chTarget, target$=targetPct!=null?start*targetPct/100:null;
+  const targetProg=target$?Math.max(0,Math.min(100,net/target$*100)):null;
+  // toplam kayıp limiti tabanı (maxFloor = bu bakiyenin altına inersen yanarsın):
+  //  static        → başlangıç - başlangıç*max%
+  //  trailing      → en yüksek bakiye - başlangıç*max%  (peak'i takip eder)
+  //  trailing-lock → trailing gibi ama taban başlangıç+hedef seviyesini geçince başlangıç bakiyesinde kilitlenir
+  const ddType=p.chDdType||'static', ddMaxPct=p.chDdMax;
+  let maxFloor=null;
+  if(ddMaxPct!=null){
+    if(ddType==='static'){maxFloor=start-(start*ddMaxPct/100);}
+    else{
+      maxFloor=peak-(start*ddMaxPct/100);
+      if(ddType==='trailing-lock'&&maxFloor>start)maxFloor=start; // başlangıç seviyesinde kilit
+    }
+  }
+  const maxBuffer=maxFloor!=null?(bal-maxFloor):null;          // yanmaya ne kadar var ($)
+  const maxBufferPct=(maxFloor!=null&&start)?maxBuffer/start*100:null;
+  // günlük kayıp limiti
+  const ddDailyPct=p.chDdDaily, dailyLimit$=ddDailyPct!=null?start*ddDailyPct/100:null;
+  const dailyLoss=Math.min(0,todayPnl);                        // bugünkü kayıp (negatif)
+  const dailyBuffer=dailyLimit$!=null?(dailyLimit$+dailyLoss):null; // kalan günlük kayıp payı ($)
+  const dailyBufferPct=(dailyLimit$&&start)?dailyBuffer/start*100:null;
+  // durum
+  let status='ok';
+  if((maxBuffer!=null&&maxBuffer<=0)||(dailyBuffer!=null&&dailyBuffer<=0))status='fail';
+  else if(targetProg!=null&&targetProg>=100)status='pass';
+  else if((maxBufferPct!=null&&maxBufferPct<1)||(dailyBufferPct!=null&&dailyBufferPct<1))status='warn';
+  const minDaysOk=(p.chMinDays==null||p.chMinDays<=0)?true:(days>=p.chMinDays);
+  return {start,bal,net,peak,todayPnl,days,target$,targetProg,maxFloor,maxBuffer,maxBufferPct,dailyLimit$,dailyBuffer,dailyBufferPct,status,minDaysOk};
+}
+function renderChallenge(){
+  const box=document.getElementById('jr-challenge'); if(!box)return;
+  const p=getActiveProfile();
+  const hasRules=p&&(p.chTarget!=null||p.chDdMax!=null||p.chDdDaily!=null);
+  if(!hasRules){box.style.display='none';box.innerHTML='';return;}
+  const s=challengeStats(p,jrTrades);
+  const cur=p.currency||'USD';
+  const money=v=>(v>=0?'':'-')+Math.abs(Math.round(v)).toLocaleString('tr-TR')+' '+cur;
+  const pct=v=>v==null?'—':(v>=0?'':'-')+Math.abs(v).toFixed(2)+'%';
+  const bar=(prog,color)=>`<div class="chal-bar"><div style="width:${Math.max(0,Math.min(100,prog||0))}%;background:${color}"></div></div>`;
+  const statusMap={ok:['#26a69a','🟢 Kurallara uygun'],warn:['#f59e0b','🟡 Limite yakın — dikkat'],fail:['#ef5350','🔴 Limit aşıldı / ihlal'],pass:['#26a69a','🎉 Kâr hedefi tamamlandı']};
+  const [scol,slbl]=statusMap[s.status]||statusMap.ok;
+  let cards='';
+  // Kâr hedefi
+  if(s.target$!=null){
+    cards+=`<div class="chal-card"><div class="chal-lbl">🎯 Kâr Hedefi</div>
+      <div class="chal-val ${s.net>=0?'pos':'neg'}">${money(s.net)} <small>/ ${money(s.target$)}</small></div>
+      ${bar(s.targetProg,'#6d5dfc')}<div class="chal-sub">%${(s.targetProg||0).toFixed(1)} tamamlandı</div></div>`;
+  }
+  // Günlük kayıp payı
+  if(s.dailyLimit$!=null){
+    const prog=s.dailyBuffer!=null?(s.dailyBuffer/s.dailyLimit$*100):100;
+    const col=s.dailyBufferPct!=null&&s.dailyBufferPct<1?'#ef5350':(s.dailyBufferPct<2?'#f59e0b':'#26a69a');
+    cards+=`<div class="chal-card"><div class="chal-lbl">📉 Bugünkü Kayıp Payı</div>
+      <div class="chal-val ${s.dailyBuffer>0?'':'neg'}">${money(s.dailyBuffer)} <small>kaldı</small></div>
+      ${bar(prog,col)}<div class="chal-sub">Günlük limit: ${money(s.dailyLimit$)} · bugün: ${money(s.todayPnl)}</div></div>`;
+  }
+  // Toplam drawdown tamponu
+  if(s.maxBuffer!=null){
+    const prog=s.maxBuffer>0?Math.min(100,s.maxBuffer/(s.start*(p.chDdMax/100))*100):0;
+    const col=s.maxBufferPct!=null&&s.maxBufferPct<1?'#ef5350':(s.maxBufferPct<2?'#f59e0b':'#26a69a');
+    cards+=`<div class="chal-card"><div class="chal-lbl">🛡 Toplam Kayıp Tamponu</div>
+      <div class="chal-val ${s.maxBuffer>0?'':'neg'}">${money(s.maxBuffer)} <small>kaldı</small></div>
+      ${bar(prog,col)}<div class="chal-sub">${p.chDdType==='static'?'Statik':(p.chDdType==='trailing'?'Trailing':'Trailing-kilit')} · taban: ${money(s.maxFloor)}</div></div>`;
+  }
+  // Min gün
+  let minDayChip='';
+  if(p.chMinDays!=null&&p.chMinDays>0){
+    minDayChip=`<span class="chal-chip ${s.minDaysOk?'ok':''}">📆 İşlem günü: ${s.days}/${p.chMinDays}${s.minDaysOk?' ✓':''}</span>`;
+  }
+  box.style.display='block';
+  box.innerHTML=`
+    <div class="chal-head">
+      <div><b>🏆 ${esc(p.name)}</b> ${p.broker?'<span class="chal-broker">'+esc(p.broker)+'</span>':''}</div>
+      <div class="chal-status" style="color:${scol}">${slbl}</div>
+    </div>
+    <div class="chal-bal">Güncel bakiye: <b>${money(s.bal)}</b> · Başlangıç: ${money(s.start)} ${minDayChip}</div>
+    <div class="chal-grid">${cards}</div>
+    ${s.status==='warn'||s.status==='fail'?`<div class="chal-warn">${s.status==='fail'?'⛔ Bir limit aşıldı — bu hesapta işlem kurallarını gözden geçir.':'⚠️ Bir limite %1\'den az kaldı. Bugün riski azalt.'}</div>`:''}`;
 }
 
 function jrGoalsKey(){return 'fxdesk_goals_'+(currentUser?currentUser.id:'anon')+'_'+activeProfileId;}
@@ -3057,6 +3203,8 @@ function clearPrForm(){
   document.getElementById('pr-acc').value='real';
   document.getElementById('pr-bal').value=localStorage.getItem('fxdesk_def_balance')||'10000';
   document.getElementById('pr-cur').value=localStorage.getItem('fxdesk_def_currency')||'USD';
+  ['pr-firm','pr-target','pr-dd-daily','pr-dd-max','pr-mindays'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pr-dd-type').value='static';
   updPrAuto();
 }
 function fillPrForm(id){
@@ -3069,19 +3217,47 @@ function fillPrForm(id){
   document.getElementById('pr-acc').value=p.accountType||'real';
   document.getElementById('pr-bal').value=p.startBalance||0;
   document.getElementById('pr-cur').value=p.currency||'USD';
+  document.getElementById('pr-firm').value='';
+  document.getElementById('pr-target').value=p.chTarget??'';
+  document.getElementById('pr-dd-daily').value=p.chDdDaily??'';
+  document.getElementById('pr-dd-max').value=p.chDdMax??'';
+  document.getElementById('pr-mindays').value=p.chMinDays??'';
+  document.getElementById('pr-dd-type').value=p.chDdType||'static';
   updPrAuto();
 }
 function updPrAuto(){
   const t=document.getElementById('pr-type').value;
   document.getElementById('pr-autobox').style.display='block';
   document.getElementById('pr-auto-name').textContent=(t==='prop'?'📄 Fon firması account statement (PDF) yükle':'📈 MT5 geçmiş raporu (HTML) yükle');
+  // Meydan okuma kuralları yalnızca Fon Firması / prop hesabında görünsün
+  const acc=document.getElementById('pr-acc').value;
+  const showChall=(t==='prop'||acc==='prop');
+  document.getElementById('pr-challbox').style.display=showChall?'block':'none';
+}
+/* hazır fon firması şablonları: [hedef%, günlük%, toplam%, minGün, ddTip] */
+const FIRM_PRESETS={
+  ftmo2:{target:10,ddDaily:5,ddMax:10,minDays:0,ddType:'trailing-lock'},
+  fundednext:{target:10,ddDaily:5,ddMax:10,minDays:0,ddType:'trailing-lock'},
+  the5ers:{target:8,ddDaily:5,ddMax:6,minDays:0,ddType:'trailing'},
+  brightfunded:{target:8,ddDaily:5,ddMax:10,minDays:0,ddType:'trailing-lock'}
+};
+function applyFirmPreset(){
+  const k=document.getElementById('pr-firm').value; const f=FIRM_PRESETS[k]; if(!f)return;
+  document.getElementById('pr-target').value=f.target;
+  document.getElementById('pr-dd-daily').value=f.ddDaily;
+  document.getElementById('pr-dd-max').value=f.ddMax;
+  document.getElementById('pr-mindays').value=f.minDays;
+  document.getElementById('pr-dd-type').value=f.ddType;
 }
 function savePrProfile(){
   const name=document.getElementById('pr-name').value.trim();
   if(!name){alert('Profil adı gir.');return;}
+  const num=id=>{const v=document.getElementById(id).value;return v===''?null:(+v);};
   const data={name,type:document.getElementById('pr-type').value,broker:document.getElementById('pr-broker').value.trim(),
     accountType:document.getElementById('pr-acc').value,startBalance:+document.getElementById('pr-bal').value||0,
-    currency:document.getElementById('pr-cur').value.trim()||'USD'};
+    currency:document.getElementById('pr-cur').value.trim()||'USD',
+    chTarget:num('pr-target'),chDdDaily:num('pr-dd-daily'),chDdMax:num('pr-dd-max'),
+    chMinDays:num('pr-mindays'),chDdType:document.getElementById('pr-dd-type').value};
   if(prEditId){const p=_profiles.find(x=>x.id===prEditId);Object.assign(p,data);}
   else{const np={id:'pr'+Date.now(),...data};_profiles.push(np);activeProfileId=np.id;localStorage.setItem(actProfKey(),np.id);}
   saveProfiles();renderProfileSel();renderPrList();clearPrForm();renderJournal();
@@ -3279,6 +3455,8 @@ document.getElementById('pr-cancel').addEventListener('click',closeProfileModal)
 document.getElementById('pr-save').addEventListener('click',savePrProfile);
 document.getElementById('pr-modal-bg').addEventListener('click',e=>{if(e.target.id==='pr-modal-bg')closeProfileModal();});
 document.getElementById('pr-type').addEventListener('change',updPrAuto);
+document.getElementById('pr-acc').addEventListener('change',updPrAuto);
+document.getElementById('pr-firm').addEventListener('change',applyFirmPreset);
 document.getElementById('pr-import').addEventListener('click',()=>document.getElementById('pr-import-file').click());
 document.getElementById('pr-import-file').addEventListener('change',e=>{const f=e.target.files[0];if(f)doImport(f);});
 document.getElementById('jr-view-table').addEventListener('click',()=>setJrView('table'));
