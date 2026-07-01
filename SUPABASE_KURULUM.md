@@ -305,6 +305,81 @@ create policy "ins_vote" on votes for insert with check (
 
 ---
 
+## Gated access (özel grup — admin onayı)
+
+Yeni kayıtların **yalnızca sen onayladıktan sonra** girebilmesi için. Sırayla:
+
+**1. Aşağıdaki SQL'i Supabase → SQL Editor'de çalıştır** (bir kez):
+
+```sql
+-- 1) approved kolonu — mevcut herkes onaylı sayılır, yeni kayıtlar onaysız gelir
+alter table profiles add column if not exists approved boolean not null default false;
+update profiles set approved = true;   -- şu anki tüm kullanıcıları onayla (bir kez)
+
+-- 2) admin_list_users: approved alanını da döndür (dönen tip değişti → düşür+oluştur)
+drop function if exists admin_list_users();
+create function admin_list_users()
+returns table (
+  id uuid, username text, email text,
+  is_admin boolean, is_moderator boolean, is_banned boolean,
+  approved boolean, created_at timestamptz, last_seen timestamptz
+)
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if not exists (select 1 from profiles p where p.id = auth.uid() and p.is_admin = true) then
+    raise exception 'yetkisiz';
+  end if;
+  return query
+    select p.id, p.username, u.email::text,
+           p.is_admin, coalesce(p.is_moderator,false), coalesce(p.is_banned,false),
+           coalesce(p.approved,false), p.created_at, p.last_seen
+    from profiles p join auth.users u on u.id = p.id
+    order by p.last_seen desc nulls last;
+end;
+$$;
+grant execute on function admin_list_users() to authenticated;
+
+-- 3) admin_set_flags: p_approved parametresi eklendi (eski imzayı düşür)
+drop function if exists admin_set_flags(uuid, boolean, boolean);
+create or replace function admin_set_flags(
+  target_id uuid,
+  p_is_moderator boolean default null,
+  p_is_banned    boolean default null,
+  p_approved     boolean default null
+)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  if not exists (select 1 from profiles p where p.id = auth.uid() and p.is_admin = true) then
+    raise exception 'yetkisiz';
+  end if;
+  if exists (select 1 from profiles p where p.id = target_id and p.is_admin = true) then
+    raise exception 'admin uzerinde islem yapilamaz';
+  end if;
+  update profiles set
+    is_moderator = coalesce(p_is_moderator, is_moderator),
+    is_banned    = coalesce(p_is_banned,    is_banned),
+    approved     = coalesce(p_approved,     approved)
+  where id = target_id;
+end;
+$$;
+grant execute on function admin_set_flags(uuid, boolean, boolean, boolean) to authenticated;
+```
+
+**2. SQL bittikten SONRA** `trade.html` (ve `index.html`) içindeki bayrağı aç:
+```js
+const GATED_ACCESS = true;   // varsayılan false
+```
+
+Nasıl çalışır:
+- **Bayrak `false` (varsayılan):** Hiçbir değişiklik yok; herkes kayıt olup hemen girer. SQL'i çalıştırsan bile gating devreye girmez.
+- **Bayrak `true` + SQL çalıştırıldı:** Yeni kayıt = **başvuru**. Kullanıcı "Başvurun alındı, onay bekleniyor" görür, giremez. Sen **Admin paneli → Kullanıcılar**'da o kişiyi **✅ Onayla** dersin; artık girebilir. Üst başlıkta "*N onay bekliyor*" sayacı çıkar; onay bekleyen satırlar **⏳ Onay bekliyor** rozetiyle işaretlenir.
+- **Güvenlik:** `approved` kolonu yoksa (SQL çalıştırılmadıysa) sistem **açık** kalır — bayrak yanlışlıkla `true` olsa bile kimse kilitlenmez. Yöneticiler (ADMIN_EMAILS) her zaman girer.
+- **Onayı geri alma:** Aynı satırda **Onayı al** ile kullanıcıyı tekrar beklemeye düşürebilirsin.
+
+---
+
 ## Geri bildirim (Beta sekmesi → Admin paneli)
 
 Beta sekmesindeki "Sorun bildir / özellik öner" kutusundan gelen mesajların **Supabase'de saklanması** ve admin panelindeki **📨 Geri Bildirimler** bölümünde okunabilmesi için `feedback` tablosunu ve kurallarını oluştur. SQL Editor → New query → Run:

@@ -12,7 +12,7 @@
 ## ⭐ Sıradaki seçilenler — 2026-06-30 (sırayla yapılacak)
 1. [x] **İşlem Günlüğüm: profil özeti + strateji etiketi** — ✅ Üstte özet kartları (İşlem, Toplam P&L, Ort. RR, Toplam R, Başarı %, En çok parite, En iyi/En kötü işlem) — aktif profil + filtreye göre. Tabloya **Strateji** kolonu (serbest metin — istediğini elle yaz; hazır öneriler OB/FVG/Likidite/Kırılım… + **kullanıcının kendi yazdığı stratejiler tüm profillerinden toplanıp öneri listesine eklenir**; değere göre otomatik renkli etiket) + **strateji filtresi** (parite filtresinin yanında). Filtre seçince özet o seçime göre güncellenir (örn. sadece FVG → FVG başarı %'si).
 2. [x] **İşlem Günlüğüm → Paylaş köprüsü** — ✅ Her satırda **📤** butonu. Tıklayınca Paylaşımlar sekmesine geçer ve composer'ı otomatik doldurur: görseller (setup + after, max 3), parite, ve metin (açıklama + "Strateji: … · TF: … · RR: …"). Bias nötr varsayılan (günlükte yön yok), kullanıcı değiştirip "Paylaş"a basar.
-3. [ ] **Gated access (başvuru + admin onay / davet kodu)** — Özel Discord lansmanı için. Yeni kayıt "onay bekliyor" olur; admin panelinden onayla/reddet **veya** davet kodu ile kayıt. *(auth/RLS'e dokunur — ayrı, dikkatli bir geçiş; Supabase'de SQL gerekecek)*
+3. [x] **Gated access (başvuru + admin onay)** — ✅ Kod hazır. `GATED_ACCESS` bayrağı (varsayılan **false** = mevcut davranış). Açıkken: yeni kayıt = başvuru ("onay bekliyor", giremez); admin panelinde **✅ Onayla** / Onayı al + "N onay bekliyor" sayacı + ⏳ rozet. Güvenli: `approved` kolonu yoksa sistem açık kalır (fail-open), adminler her zaman girer. **Aktifleştirmek için:** (a) SUPABASE_KURULUM.md → "Gated access" SQL'ini çalıştır, (b) `GATED_ACCESS=true` yap. *(SQL + bayrak kullanıcıda — lansman anında açılacak)*
 
 ---
 
