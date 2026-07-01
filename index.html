@@ -959,6 +959,16 @@
   .set-accents button.active{border-color:var(--text)}
   .set-muted{color:var(--muted);font-size:12.5px;line-height:1.6;margin-bottom:10px}
   .set-importlbl{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+  /* alarm toggle */
+  .switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+  .switch input{opacity:0;width:0;height:0}
+  .switch-tr{position:absolute;inset:0;background:var(--panel-2);border:1px solid var(--border);border-radius:24px;cursor:pointer;transition:.2s}
+  .switch-tr::before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:var(--muted);border-radius:50%;transition:.2s}
+  .switch input:checked + .switch-tr{background:var(--accent);border-color:var(--accent)}
+  .switch input:checked + .switch-tr::before{transform:translateX(20px);background:#fff}
+  .al-when{display:flex;gap:14px;flex-wrap:wrap}
+  .al-when label{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer}
+  #al-opts.off{opacity:.45;pointer-events:none}
 
   .beta-thanks{color:var(--green);font-size:13px;margin-top:10px;font-weight:600}
 
@@ -1522,6 +1532,26 @@
       </div>
       <div class="set-card"><h3>📅 Ekonomik takvim</h3>
         <div class="set-row"><span>Varsayılan önem filtresi</span><div class="set-seg" id="set-calimp"><button data-i="high">🔴 Yüksek</button><button data-i="med">🔴🟠 +Orta</button><button data-i="all">Tümü</button></div></div>
+        <div class="set-row"><span>🔔 Haber alarmı <small class="set-muted" style="display:block;font-weight:400">Yalnızca yüksek önemli (🔴) haberler için sesli uyarı</small></span><label class="switch"><input type="checkbox" id="al-on"><span class="switch-tr"></span></label></div>
+        <div id="al-opts">
+          <div class="set-row"><span>Ne zaman çalsın</span><div class="al-when">
+            <label><input type="checkbox" id="al-15" value="15"> 15 dk önce</label>
+            <label><input type="checkbox" id="al-3" value="3"> 3 dk önce</label>
+            <label><input type="checkbox" id="al-0" value="0"> Haber anında</label>
+          </div></div>
+          <div class="set-row"><span>Alarm sesi</span><div class="set-inline">
+            <select id="al-sound">
+              <option value="beep">Bip (kısa)</option>
+              <option value="chime">Çan</option>
+              <option value="alert">Uyarı (çift ton)</option>
+              <option value="ding">Ding</option>
+              <option value="custom">Kendi sesim…</option>
+            </select>
+            <button id="al-test" type="button">▶ Dene</button>
+          </div></div>
+          <div class="set-row" id="al-custom-row" style="display:none"><span>Ses dosyası (mp3/wav)</span><label class="set-importlbl">🎵 Ses seç<input id="al-custom-file" type="file" accept="audio/*" hidden></label></div>
+          <div class="set-row"><span>Ses seviyesi</span><input type="range" id="al-vol" min="0" max="100" step="5" style="flex:1;max-width:220px"></div>
+        </div>
       </div>
       <div class="set-card"><h3>💾 Veri yönetimi</h3>
         <div class="set-inline"><button id="set-export">Raporlar yedeğini indir (JSON)</button><label class="set-importlbl">İçe aktar<input id="set-import" type="file" accept=".json" hidden></label></div>
@@ -1937,6 +1967,7 @@ function renderCalendar(){
 
 /* sıradaki haber geri sayımı */
 function tickCalendar(){
+  checkAlarms();
   const box=document.getElementById('cal-next');
   const now=Date.now();
   const next=calEvents.find(e=>calCur.has(e.cur)&&impAllowed(e.impact)&&e.date.getTime()>now);
@@ -1953,6 +1984,108 @@ function tickCalendar(){
     <div class="cn-time">${cd}</div>`;
 }
 setInterval(tickCalendar,1000);
+
+/* ========== HABER ALARMI ========== */
+const AL_DEF={on:false,offsets:{15:false,3:false,0:false},sound:'beep',custom:'',vol:60};
+let alCfg=loadAlarmCfg();
+const alFired=new Set();               // "eventKey|offset" -> tekrar çalmasın
+let _alCtx=null;
+function loadAlarmCfg(){
+  try{const s=JSON.parse(localStorage.getItem('fxdesk_alarm')||'null');if(s)return Object.assign({},AL_DEF,s,{offsets:Object.assign({},AL_DEF.offsets,s.offsets)});}catch(e){}
+  return JSON.parse(JSON.stringify(AL_DEF));
+}
+function saveAlarmCfg(){try{localStorage.setItem('fxdesk_alarm',JSON.stringify(alCfg));}catch(e){}}
+function alCtx(){ if(!_alCtx){try{_alCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}} if(_alCtx&&_alCtx.state==='suspended')_alCtx.resume(); return _alCtx; }
+/* hazır sesler: WebAudio ile üretilir (dosya gerekmez) */
+function playTone(seq,vol){
+  const ctx=alCtx(); if(!ctx)return;
+  const g=ctx.currentTime; const master=vol/100;
+  seq.forEach(n=>{
+    const o=ctx.createOscillator(),gain=ctx.createGain();
+    o.type=n.type||'sine'; o.frequency.value=n.f;
+    o.connect(gain); gain.connect(ctx.destination);
+    const t0=g+n.t, t1=t0+n.d;
+    gain.gain.setValueAtTime(0.0001,t0);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.001,master),t0+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001,t1);
+    o.start(t0); o.stop(t1+0.02);
+  });
+}
+const AL_PRESETS={
+  beep:  [{f:880,t:0,d:0.15,type:'square'}],
+  chime: [{f:987,t:0,d:0.25},{f:1318,t:0.18,d:0.35}],
+  alert: [{f:660,t:0,d:0.18,type:'triangle'},{f:660,t:0.28,d:0.18,type:'triangle'}],
+  ding:  [{f:1568,t:0,d:0.5,type:'sine'}]
+};
+function playAlarm(){
+  const vol=alCfg.vol|0;
+  if(alCfg.sound==='custom'&&alCfg.custom){
+    try{const a=new Audio(alCfg.custom);a.volume=Math.min(1,vol/100);a.play().catch(()=>{});return;}catch(e){}
+  }
+  playTone(AL_PRESETS[alCfg.sound]||AL_PRESETS.beep,vol);
+}
+/* tickCalendar her saniye çağırır: yaklaşan high-impact haberleri kontrol et */
+function checkAlarms(){
+  if(!alCfg.on)return;
+  const active=Object.keys(alCfg.offsets).filter(k=>alCfg.offsets[k]).map(Number);
+  if(!active.length)return;
+  const now=Date.now();
+  // yalnızca yüksek önemli + izlenen para birimleri, önümüzdeki ~16 dk
+  calEvents.forEach(e=>{
+    if(e.impact!=='High'||!calCur.has(e.cur))return;
+    const secToEv=(e.date.getTime()-now)/1000;
+    if(secToEv<-2||secToEv>16*60)return;
+    const evKey=e.date.getTime()+'|'+e.cur+'|'+e.title;
+    active.forEach(off=>{
+      const target=off*60;                // hedef: haberden 'off' dk önce
+      const key=evKey+'|'+off;
+      // pencere: hedef saniyeye 0..1.5 sn kala tetikle (saniyelik tick ile ıskalanmasın)
+      if(!alFired.has(key) && secToEv<=target+0.5 && secToEv>target-1.5){
+        alFired.add(key); playAlarm(); showAlarmToast(e,off);
+      }
+    });
+  });
+  // eski kayıtları temizle (bellek şişmesin)
+  if(alFired.size>400)alFired.clear();
+}
+function showAlarmToast(e,off){
+  const when=off>0?off+' dk sonra':'ŞİMDİ';
+  let t=document.getElementById('al-toast');
+  if(!t){t=document.createElement('div');t.id='al-toast';t.style.cssText='position:fixed;right:18px;bottom:18px;z-index:9999;background:var(--panel);border:1px solid var(--red);border-left:4px solid var(--red);border-radius:12px;padding:12px 16px;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:320px;font-size:13px;color:var(--text);animation:alIn .25s ease';document.body.appendChild(t);}
+  t.innerHTML=`<div style="font-weight:700;margin-bottom:2px">🔔 Önemli haber · ${when}</div><div>${FLAG[e.cur]||''} ${e.cur} · ${e.title}</div><div style="color:var(--muted);font-size:12px;margin-top:3px">${fmtTime(e.date)}</div>`;
+  t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';},8000);
+}
+if(!document.getElementById('al-anim')){const st=document.createElement('style');st.id='al-anim';st.textContent='@keyframes alIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}';document.head.appendChild(st);}
+
+/* Ayarlar UI bağlama */
+function syncAlarmUI(){
+  const on=document.getElementById('al-on'); if(!on)return;
+  on.checked=alCfg.on;
+  document.getElementById('al-15').checked=!!alCfg.offsets[15];
+  document.getElementById('al-3').checked=!!alCfg.offsets[3];
+  document.getElementById('al-0').checked=!!alCfg.offsets[0];
+  document.getElementById('al-sound').value=alCfg.sound;
+  document.getElementById('al-vol').value=alCfg.vol;
+  document.getElementById('al-custom-row').style.display=alCfg.sound==='custom'?'':'none';
+  document.getElementById('al-opts').classList.toggle('off',!alCfg.on);
+}
+function bindAlarmUI(){
+  const on=document.getElementById('al-on'); if(!on||on._bound)return; on._bound=true;
+  on.addEventListener('change',()=>{alCfg.on=on.checked;if(on.checked)alCtx();saveAlarmCfg();syncAlarmUI();});
+  [['al-15',15],['al-3',3],['al-0',0]].forEach(([id,off])=>{
+    document.getElementById(id).addEventListener('change',ev=>{alCfg.offsets[off]=ev.target.checked;saveAlarmCfg();});
+  });
+  document.getElementById('al-sound').addEventListener('change',ev=>{alCfg.sound=ev.target.value;saveAlarmCfg();syncAlarmUI();});
+  document.getElementById('al-vol').addEventListener('input',ev=>{alCfg.vol=+ev.target.value;saveAlarmCfg();});
+  document.getElementById('al-test').addEventListener('click',()=>{alCtx();playAlarm();});
+  document.getElementById('al-custom-file').addEventListener('change',ev=>{
+    const f=ev.target.files&&ev.target.files[0]; if(!f)return;
+    if(f.size>2*1024*1024){alert('Ses dosyası 2 MB\'dan küçük olmalı.');return;}
+    const rd=new FileReader(); rd.onload=()=>{alCfg.custom=rd.result;alCfg.sound='custom';saveAlarmCfg();syncAlarmUI();playAlarm();}; rd.readAsDataURL(f);
+  });
+  syncAlarmUI();
+}
+bindAlarmUI();
 
 /* filtre kontrolleri */
 document.querySelectorAll('#cal-imp button').forEach(b=>b.addEventListener('click',()=>{
@@ -3925,6 +4058,7 @@ function settingsInit(){
   if(g('gc-up'))g('gc-up').value=gv('fxdesk_grid_up','#ffffff');
   if(g('gc-down'))g('gc-down').value=gv('fxdesk_grid_down','#787b86');
   if(g('gc-wick'))g('gc-wick').value=gv('fxdesk_grid_wick','#9598a1');
+  if(typeof bindAlarmUI==='function'){bindAlarmUI();syncAlarmUI();}
 }
 async function changePass(){
   const el=document.getElementById('set-pass'); const p=el.value;
