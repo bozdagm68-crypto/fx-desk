@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kodak Trade">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1049,6 +1050,19 @@
 
   .senti{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px}
   .senti-head{font-size:13px;font-weight:700;margin-bottom:12px}
+  /* Haftanın Analizi */
+  .week-top{margin-bottom:16px}
+  .wt-head{font-size:13px;font-weight:700;margin-bottom:10px}
+  .wt-sub{color:var(--muted);font-weight:400;font-size:12px}
+  .wt-card{display:flex;gap:14px;background:linear-gradient(135deg,rgba(245,158,11,.10),var(--panel));border:1px solid rgba(245,158,11,.35);border-radius:12px;padding:14px;cursor:pointer;transition:.15s}
+  .wt-card:hover{border-color:var(--gold)}
+  .wt-img{width:110px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);flex-shrink:0}
+  .wt-body{flex:1;min-width:0}
+  .wt-meta{font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+  .wt-text{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:8px}
+  .wt-stats{font-size:12px;color:var(--muted)}
+  .wt-stats b{color:var(--text)}
+  @media(max-width:560px){.wt-img{width:78px;height:60px}}
   .senti-sub{font-size:11px;color:var(--muted);font-weight:400}
   .senti-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
   .senti-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:5px}
@@ -1324,6 +1338,7 @@
           <button class="ff" data-f="neutral">Nötr</button>
         </div>
       </div>
+      <div class="week-top" id="week-top" style="display:none"></div>
       <div class="senti" id="senti" style="display:none"></div>
 
       <div class="feed-disclaimer">⚠️ <b>Yatırım tavsiyesi değildir.</b> Bu platformda paylaşılan hiçbir içerik yatırım tavsiyesi niteliği taşımaz; yalnızca kişisel görüş ve analizdir. Tüm işlem kararları ve riskler size aittir — herkes kendi bireysel riskinden sorumludur.</div>
@@ -2551,6 +2566,31 @@ function readAndResize(file,cb){
   r.readAsDataURL(file);
 }
 
+function renderWeekTop(){
+  const box=document.getElementById('week-top'); if(!box)return;
+  const weekAgo=Date.now()-7*24*3600e3;
+  // son 7 gün · en az 3 toplam oy · gizli değil · net skor (katılıyorum − katılmıyorum) en yüksek
+  const cand=feed.filter(p=>p.ts>=weekAgo && !hidden.has(p.id) && (p.votes.agree+p.votes.disagree+p.votes.neutral)>=3)
+    .map(p=>({p,net:p.votes.agree-p.votes.disagree,tot:p.votes.agree+p.votes.disagree+p.votes.neutral}))
+    .filter(x=>x.net>0)
+    .sort((a,b)=>b.net-a.net||b.tot-a.tot||b.p.ts-a.p.ts);
+  if(!cand.length){box.style.display='none';box.innerHTML='';return;}
+  const {p,net,tot}=cand[0];
+  const ims=postImgs(p);
+  box.style.display='block';
+  box.innerHTML=`
+    <div class="wt-head">🏆 Haftanın Analizi <span class="wt-sub">· son 7 günün en beğenilen paylaşımı</span></div>
+    <div class="wt-card" data-goto="${p.id}">
+      ${ims.length?`<img class="wt-img" src="${ims[0]}" alt="setup">`:''}
+      <div class="wt-body">
+        <div class="wt-meta"><b>${esc(p.name)}</b> · <span class="chip-sym">${esc(p.symbol)}</span> <span class="bias ${p.bias}">${biasLabel(p.bias)}</span> ${outcomeBadge(p)}</div>
+        ${p.text?`<div class="wt-text">${esc(p.text.length>140?p.text.slice(0,140)+'…':p.text)}</div>`:''}
+        <div class="wt-stats">👍 ${p.votes.agree} · 💬 ${p.comments.length} · ${tot} oy · <b class="pos">+${net} net</b></div>
+      </div>
+    </div>`;
+  const c=box.querySelector('[data-goto]');
+  if(c)c.addEventListener('click',()=>{ if(ims.length)openLightbox(ims[0]); });  // görsele tıkla → büyüt
+}
 function renderSentiment(){
   const box=document.getElementById('senti'); if(!box)return;
   const agg={};
@@ -2578,6 +2618,7 @@ async function setOutcome(id,oc){
   renderFeed();
 }
 function renderFeed(){
+  renderWeekTop();
   renderSentiment();
   renderSymFilter();
   refreshAvatars();

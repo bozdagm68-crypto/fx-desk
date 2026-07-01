@@ -44,9 +44,7 @@
 
 - [x] **4. Sonuç Takipli Paylaşım (accountability / şeffaflık)** ✅ KODLANDI (2026-07-01) — `posts` tablosuna `target`/`stop`/`outcome` kolonları eklendi (MCP migration, onaylı). Composer'da opsiyonel hedef/stop; kartta sonuç rozeti (⏳ Devam / ✅ Tuttu / ❌ Stop) + sahibi için "Tuttu/Tutmadı/Devam" butonları (RLS `upd_post` ile yalnız sahibi); İstatistik → Topluluk kartında **paylaşım isabet oranı** (%X · hits/total). Insert fail-safe (kolon yoksa onlarsız çalışır).
 
-- [ ] **5. Haftalık "Setup Yarışı" / Haftanın Analizi** ⏸️ **#4'e bağlı / topluluk verisi**
-  - Paylaşımlar zaten oy alıyor. Hafta sonunda en çok oylanan setup **"🏆 Haftanın Analizi"** rozetiyle sabitlenir.
-  - **Neden bekliyor:** Ya sabit rozet için `posts`'a `pinned/featured` kolonu, ya da tamamen istemci-tarafı "bu haftanın en çok oylananı" hesabı (backendsiz de yapılabilir — uyanınca hangisini istediğini soracağım).
+- [x] **5. Haftalık "Setup Yarışı" / Haftanın Analizi** ✅ KODLANDI (2026-07-01, backendsiz) — Paylaşımlar üstünde "🏆 Haftanın Analizi" kartı: son 7 günde ≥3 oy alan, net skoru (👍−👎) en yüksek paylaşımı öne çıkarır (görsel + yazar + parite + oy istatistiği). Tamamen istemci hesabı, SQL yok. Görsele tıkla → lightbox.
 
 - [x] **6. Rozetler & Ünvanlar (kişisel kısım)** ✅ KODLANDI (commit sonraki) — İstatistik'te 9 rozet: İlk Adım, Yüzler Kulübü (100 işlem), Disiplin Serisi (7g), Demir İrade (30g), Keskin Nişancı (%60+), Öz-Farkındalık (etiket), Kalkan (disiplin 80+), Fon Avcısı (meydan okuma geçildi), Kârlı Ay. Kazanılan renkli, diğerleri soluk.
   - ⏸️ *Topluluk rozetleri* ("Analist — 10 paylaşım tuttu") #4'e bağlı, onunla gelecek.
